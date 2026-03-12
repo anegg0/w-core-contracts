@@ -1,0 +1,742 @@
+#+TITLE: W Technical Reference
+#+AUTHOR: Gael Blanchemain
+#+FILETAGS: :W:competitor:reference:
+#+STARTUP: overview
+
+* Purpose
+
+This document is a technical reference for W. It is intended for use while building W, to understand its the architecture and to inform our design decisions.
+
+Source material:
+- W developer docs (consulted March 2026)
+- W Token whitepaper v RC10, November 2021
+
+* W at a Glance
+
+W is a decentralized photo network that transforms digital media into verifiable Web3 assets. It uses blockchain storage, IPFS, NFTs, and the C2PA standard to create traceable provenance records for images and videos.
+
+Key facts:
+- *Founded*: Not yet 
+- *Blockchain*: Arbitrum chain (L3 settling to Arbitrum One)
+- *Token*: No token
+- *Notable partners*: None yet
+- *Certifications (intended)*: ISO 27001, OpenChain 2.0/ISO 5230
+- *License*: Open source (MIT and GPL-3.0)
+
+* Architecture
+
+** Solution Stack (5 Layers)
+
+| Layer | Component | Purpose |
+|-------+-----------+---------|
+|     5 | Asset Profiles & Search | Verify Engine: discovery, search, verification |
+|     4 | W Camera App | "World's first blockchain camera" (Android + iOS) |
+|     3 | Framework Tools | Nit CLI, APIs, Network Actions, Asset Explorer |
+|     2 | Asset Smart Contracts | Commit, Asset, and Collection contracts |
+|     1 | W Blockchain | Arbitrum L1 ( mainnet, Snow testnet) |
+
+** Network Participants
+
+- *Asset Owners*: Register photos, pay to store, receive licensing payments
+- *Asset Retrievers*: Pay to collect or license photos, payments flow back to creators
+- *Network Operators*: Storage providers, maintain accessibility and permanence
+- *Verifiers*: Perform integrity checks, provide professional/social trust signals
+- *Content Moderators*: Ensures medias comply with W's Content policy
+
+** Four Storage Technologies
+
+1. *IPFS/Filecoin*: Content files and metadata files
+2. *Integrity blockchain*: Full recorded content history (on-chain commit logs)
+3. *Non-fungible tokens*: Ownership records and transfer history
+4. *C2PA*: Provenance metadata for files not created with network tools
+
+** Network Tools (Capture, Seal, Trace)
+
+- *W Camera App*: Blockchain camera for Android and iOS. Collects metadata, generates integrity records, establishes ownership at creation. Used in 90+ countries.
+- *Seal API*: Developer API for creating, registering, and retrieving assets programmatically. Rich API set for ecosystem applications.
+- *Trace Site*: Web viewer for photo injection and on-chain history. Shows birth information (who, when, where). Helps users claim copyright.
+
+* Blockchain Infrastructure
+
+** Network Configuration
+
+| Parameter | Mainnet () | Testnet (Snow) |
+|-----------+----------------+----------------|
+| Chain ID | TBD | TBD |
+| RPC URL | TBS | TBD |
+| Explorer | TBD | TBD |
+| Currency | W | W (faucet: TBD)  |
+
+** Technology
+
+Built on Arbitrum, which allows W to define its own networking, execution logic, and fee structure.
+
+** Smart Contracts (3 Contracts)
+
+| Contract | Purpose |
+|----------+---------|
+| Commit | Create and query asset logs; record histories of digital media files |
+| Asset | Main contract for asset monetization; defines copyright and royalty distribution |
+| Collection | Create collections of multiple assets |
+
+** Two-Contract Architecture (Custody NFT + CFS Verifier)
+
+| Contract | Language | Purpose |
+|----------+----------+---------|
+| Custody NFT | Solidity | ERC-721 ownership token for registered assets |
+| CFS Verifier | Rust/Stylus | On-chain Camera Flash Signature proof verification |
+
+The CFS Verifier runs as a Stylus (Rust → WASM) contract on Arbitrum to minimize computational cost for cryptographic operations (10-100x cheaper than EVM for signature verification and hashing). The Custody NFT remains in Solidity to leverage OpenZeppelin's battle-tested ERC-721 implementation and marketplace compatibility.
+
+*** Custody NFT Contract
+
+*Standards*: ERC-721, EIP-2981 (royalties), OpenZeppelin AccessControl
+
+*Purpose*: Represents exclusive ownership of a captured media asset. One NFT per asset, minted only when a valid CFS proof is verified on-chain. The holder controls licensing terms and receives royalties.
+
+*Token ID derivation*: =uint256(keccak256(nid))= — deterministic from the IPFS CID. Given a file, anyone can compute its token ID. Aligns with the EIP-7053 "CID-as-identity" principle.
+
+*Token URI*: Set at mint time, permanently immutable. Points to the original AssetTree on IPFS (=ipfs://{assetTreeCid}=). The NFT certifies origin; commit history lives in the Commit contract.
+
+*Royalty*: EIP-2981, set at mint. Updatable by current NFT holder.
+
+*Constraints*:
+- One mint per Nid (reverts if token ID already exists)
+- Non-burnable (custody is permanent; transfer is the only exit)
+- No pause mechanism
+
+*Interface*:
+
+#+begin_src solidity
+// Minting (MINTER_ROLE only — held by CFS Verifier contract)
+mint(address to, string nid, string assetTreeCid, address royaltyReceiver, uint96 royaltyFee) → uint256 tokenId
+
+// Holder actions
+updateRoyalty(uint256 tokenId, address receiver, uint96 feeNumerator)
+
+// Lookups
+nidOf(uint256 tokenId) → string
+tokenIdOf(string nid) → uint256
+#+end_src
+
+*Access Control*:
+
+| Role | Granted To | Permissions |
+|------+------------+-------------|
+| DEFAULT_ADMIN_ROLE | Deployer (W multisig) | Grant/revoke roles |
+| MINTER_ROLE | CFS Verifier (future), mock minter (testing) | Call mint |
+| NFT holder | Per-token | updateRoyalty, transfer |
+
+*** CFS Verifier Contract (Future)
+
+Rust/Stylus contract that verifies Camera Flash Signature proofs on-chain. Will hold MINTER_ROLE on the Custody NFT contract. Design TBD.
+
+*** Not Yet In Scope
+
+- License NFTs (separate ERC-1155 contract for tradeable usage licenses)
+- Royalty splitting to multiple recipients (use a splitter contract as EIP-2981 receiver if needed)
+- Commit contract integration details
+
+* Core Concepts
+
+** Numbers ID (Nid)
+
+The Nid is a 59-character string cryptographically generated from the file content. It is the IPFS Content Identifier (CID) and serves as the canonical Web3 address for digital media files. Follows the EIP-7053 standard for interoperable identification.
+
+- Every file gets a unique Nid
+- A file can only be registered once (deduplication by content hash)
+- The Nid is the primary key for all queries
+
+** Assetization Process
+
+The workflow to convert a media file into a Web3 asset:
+
+1. *Data Preparation*: Add metadata (creator, description, generation details) and create a digital signature. W Camera App automates this.
+2. *Blockchain Registration*: Upload via API or W Camera App. System generates Nid, initial Commit, and AssetTree on-chain.
+3. *Monitor and Govern*: AI-powered scanning and human-review for improper usage. Custody NFTs grant ownership certificates for policy definition.
+4. *Monetization*: Create Asset Contracts for royalty distribution. Mint License NFTs tradeable on marketplaces.
+5. *Commit and Trace*: Subsequent modifications tracked as Commits. Complete history traceable and verifiable.
+
+** Commits
+
+Commits are Git-like version control records for media files. They are immutable on-chain messages paired with IPFS-pinned AssetTree files.
+
+*** Commit Data Structure
+
+| Field | Type | Required | Description |
+|-------+------+----------+-------------|
+| assetCid | string | yes | Asset's Nid (content identifier) |
+| assetTreeCid | string | yes | IPFS CID of the AssetTree file |
+| assetTreeSha256 | string | yes | SHA-256 hash of the AssetTree |
+| assetTreeSignature | string | yes | EIP-191 cryptographic signature |
+| author | string | yes | Creator's wallet address |
+| committer | string | yes | Transaction sender's wallet address |
+| action | string | yes | IPFS reference describing the action |
+| actionName | string | yes | Human-readable action identifier |
+| timestampCreated | integer | yes | Unix timestamp |
+| abstract | string | yes | Human-readable description |
+| provider | string | no | IPFS reference to provider profile |
+| actionResult | string | no | IPFS link to result data |
+| attachment | string | no | Additional attachments |
+
+*** On-Chain Commit Log (JSON Representation)
+
+#+begin_src json
+{
+  "assetTreeCid": "bafybei...",
+  "assetTreeSha256": "32ff5bc7...",
+  "assetTreeSignature": "0x...",
+  "author": "0x40ea78e78f3cF0FAcc...",
+  "committer": "0x51130dB91B91377A24d6...",
+  "provider": "W",
+  "timestampCreated": 1654837301,
+  "action": "Initial Registration",
+  "actionResult": "https://ipfs.io/ipfs/...",
+  "abstract": "Initial registration on W "
+}
+#+end_src
+
+*** Pre-Defined Actions
+
+Initial registration (Arbitrum), NFT minting on various chains, and licensing. Developers can create custom actions by submitting JSON specifications to the Nit repository.
+
+*** Key Properties
+
+- Anyone can make commits for media files (decentralized contribution)
+- Commits from owners, creators, and verified sources are distinguishable through filtering
+- Single assets support multiple commits, building a history
+- Original assets are NOT stored on-chain; only the Nid, hashes, and signatures are recorded
+
+** AssetTree
+
+AssetTree files are JSON documents stored on IPFS that describe all properties of a registered asset. Each commit generates a new AssetTree reflecting the asset's current state.
+
+*** AssetTree Schema (21 Fields)
+
+*Required fields:*
+
+| Field | Type | Description |
+|-------+------+-------------|
+| assetCid | string | IPFS hash of the asset file (= Nid) |
+| assetSha256 | string | SHA-256 hash of the asset file |
+| encodingFormat | string | MIME type (e.g., "image/png") |
+| assetTimestampCreated | integer | Unix timestamp of first blockchain recognition |
+| assetCreator | string | Creator name (max 15 characters) |
+
+*Important optional fields:*
+
+| Field | Type | Description |
+|-------+------+-------------|
+| abstract | string | Brief description (max 500 characters) |
+| headline | string | Content title |
+| license | object | Contains "name" and "document" URL |
+| assetCreatorAddress | string | Creator's wallet address |
+| assetSourceType | string | IPTC digitalSourceType vocabulary |
+| integrityCid | string | CID of device-signed integrity proof |
+| nftRecord | string | CID of NFT tracking JSON |
+| parentAssetCid | string | Parent asset relationship |
+| custom | string | Extensible JSON metadata |
+
+*** AssetTree Example
+
+#+begin_src json
+{
+  "assetCid": "bafybei...",
+  "assetSha256": "32ff5bc7ec49400...",
+  "encodingFormat": "image/png",
+  "assetTimestampCreated": 1674050470,
+  "assetCreator": "Tammy Yang",
+  "license": {
+    "name": "CC BY-SA 4.0",
+    "document": "https://creativecommons.org/licenses/by-sa/4.0/"
+  },
+  "abstract": "Example registration on wprotocol.io",
+  "nftRecord": "bafybei..."
+}
+#+end_src
+
+*** integrityCid: Device-Signed Proofs
+
+The integrityCid field references tamper-proof metadata collected by the capture device:
+
+- Device specifications (name, manufacturer, OS version, UUID)
+- Environmental context (battery level, memory usage, disk space)
+- Geolocation data (latitude/longitude)
+- Proof hash: cryptographic fingerprint of content
+- Capture timestamp and MIME type
+
+NOTE: This is metadata-only integrity. There is no equivalent to W's Camera Flash Signature liveness proof. The device data can be spoofed on a compromised device.
+
+*** nftRecord: Multi-Chain NFT Tracking
+
+Tracks all NFTs minted from a single asset across chains:
+
+#+begin_src json
+[
+  {
+    "network": 108,
+    "contractAddress": "0x59d6fe14e7bfaf7c89c297be301195b96335df0e",
+    "tokenId": "37262"
+  }
+]
+#+end_src
+
+*** Standards Compliance
+
+- *IPTC*: Controlled vocabulary for digitalSourceType (trainedAlgorithmicMedia, digitalCapture, digitalArt, algorithmicMedia)
+- *C2PA*: Mining preferences and generative AI attribution (aiGenerativeTraining, aiGenerativeTrainingWithAuthorship, dataMining, aiInference)
+- *EIP-7053*: Interoperable asset identification
+- *EIP-191*: Cryptographic signatures for AssetTree
+
+* Developer APIs
+
+** Authentication
+
+All APIs (except read) require a *Capture Token* obtained by creating a Capture account. Include as header:
+
+#+begin_src
+Authorization: token YOUR_CAPTURE_TOKEN
+#+end_src
+
+** Pricing Model
+
+| Operation | Cost |
+|-----------+------|
+| Asset Registration | Pay-per-use (W tokens) |
+| Asset Search | 0.2 W + ~0.004 W gas |
+| Commit to  | 0.1 W + ~0.004 W gas |
+| Read Commits | Free |
+| Storage (post-registration) | 0.1 W/file/month |
+
+No gas cost if paying with Credits instead of W.
+
+** API Reference
+
+*** Initial Asset Registration
+
+Registers a new asset on the W blockchain. Creates first commit, pins content to IPFS with Filecoin backup, makes asset discoverable via Verify Engine.
+
+- Returns the asset's *Nid*
+- IPFS pins remain accessible for one month post-registration (extendable)
+- Enterprise Plan users can include x-api-key header
+
+*** Asset Search (Verify Engine)
+
+*Endpoint:* POST https://us-central1-w-protocol-api.cloudfunctions.net/asset-search
+
+*Input (one required):*
+| Parameter | Type | Description |
+|-----------+------+-------------|
+| fileURL | string | Direct file URL |
+| file | object | Direct file upload |
+| nid | string | W ID lookup |
+
+*Optional:*
+| Parameter | Type | Description |
+|-----------+------+-------------|
+| threshold | float | Distance filter (smaller = stricter) |
+| sampleCount | int | Number of similar results (default: 10) |
+| isAssetTree | boolean | True if input is an AssetTree file |
+
+*Response:*
+#+begin_src json
+{
+  "preciseSearch": "nid_value_or_empty",
+  "inputFileMimetype": "image/png",
+  "similarSearch": {
+    "nids": ["bafybei...", "bafybei..."],
+    "distance": [0.05, 0.12]
+  },
+  "orderID": "abc123"
+}
+#+end_src
+
+- Empty preciseSearch = asset not registered
+- Distance < 0.12 = nearly identical (same asset with minor modifications)
+
+*** Commit to 
+
+*Endpoint:* POST https://us-central1-w-protocol-api.cloudfunctions.net/nit-commit-to-jade
+
+*Required parameters:*
+| Parameter | Type | Description |
+|-----------+------+-------------|
+| encodingFormat | string | MIME type |
+| assetCid | string | Nid of the asset |
+| assetTimestampCreated | integer | Unix timestamp |
+| assetCreator | string | Creator name |
+| assetSha256 | string | SHA-256 hash |
+
+*Optional parameters:*
+| Parameter | Type | Description |
+|-----------+------+-------------|
+| testnet | boolean | Commit to Snow testnet |
+| author | string | Author wallet address |
+| licenseName | string | License name |
+| licenseDocument | string | License document URL |
+| custom | string | Custom metadata JSON |
+| nftContractAddress | string | NFT contract address |
+| nftChainID | integer | Chain ID |
+| nftTokenID | string | Token ID |
+| commitMessage | string | Commit description |
+| action | string | Action performed |
+| abstract | string | Asset description |
+| headline | string | Content title |
+
+*Response:*
+#+begin_src json
+{
+  "txHash": "0xa9e4af...",
+  "assetCid": "bafybei...",
+  "assetTreeCid": "bafybei...",
+  "explorer": "https://mainnet.num.network/tx/0xa9e4af..."
+}
+#+end_src
+
+Default committer: W wallet (0x51130dB91B91377A24d6Ebeb2a5fC02748b53ce1). Author remains the user's Capture Wallet address.
+
+*** Read Commits
+
+*Endpoint:* GET https://e23hi68y55.execute-api.us-east-1.amazonaws.com/default/get-commits-storage-backend-jade-near
+
+*Parameters:*
+| Parameter | Type | Required | Description |
+|-----------+------+----------+-------------|
+| nid | text | yes | Asset identifier |
+| testnet | text | no | "true" for Snow testnet |
+| tmp_token | text | no | Access token for private assets |
+
+*Response:*
+#+begin_src json
+{
+  "nid": "bafybei...",
+  "commits": [
+    {
+      "transaction": "0xa9e4af...",
+      "assetTreeCid": "bafybei...",
+      "assetTreeSha256": "32ff5bc7...",
+      "assetTreeSignature": "0x...",
+      "author": "0x40ea...",
+      "committer": "0x5113...",
+      "provider": "bafybei...",
+      "timestampCreated": "1674050470",
+      "action": "bafybei...",
+      "actionName": "Initial Registration",
+      "actionNid": "bafybei...",
+      "actionResult": "https://ipfs.io/ipfs/...",
+      "abstract": "Initial registration on W "
+    }
+  ]
+}
+#+end_src
+
+This endpoint is *free* (no token cost).
+
+* Developer Tools
+
+** Nit: Git for Media Files
+
+Nit is W's open-source CLI tool and JavaScript module for managing Web3 digital asset history on the blockchain.
+
+- *Install*: yarn global add @wprotocol/nit
+- *License*: MIT
+- *Repository*: https://github.com/wprotocol/nit
+- *Supported networks*: W Blockchain, Arbitrum C-Chain
+
+*** Workflow
+
+#+begin_src shell
+# Initialize
+nit init
+
+# Create assetTree for a media file
+nit add photo.jpg -m "Initializing assetTree."
+
+# Check status
+nit status
+
+# Commit to blockchain
+nit commit -m "My first commit for the asset."
+#+end_src
+
+The commit returns an explorer URL showing the transaction details and block information.
+
+*** Nit Module (JavaScript)
+
+For programmatic access, Nit provides a JavaScript module that allows developers to:
+1. Create Capture accounts and retrieve wallets
+2. Commit to testnet (Snow) or mainnet ()
+3. Read committed data from either network
+
+** Additional Open-Source Tools
+
+| Tool | Purpose |
+|------+---------|
+| estuary-upload | File uploads and Nid generation |
+| s3-ipfs | IPFS integration with S3 datastores |
+| pyc2pa | Python C2PA implementation |
+| niota.js |  registrations |
+| avalanchego-api-scripts | Arbitrum node interaction |
+
+** Nit Bubble Plugin
+
+A no-code integration for the Bubble platform allowing commit creation and history reading without direct API interaction.
+
+* Token Economics
+
+** W Token
+
+| Property | Value |
+|----------+-------|
+| Token Name | W Token   |
+| Ticker | W   |
+| Type | ERC-20 (bridgeable to BEP-20) |
+| Total Supply | 1,000,000,000 |
+| Native chain | W Blockchain () |
+
+** Token Allocation
+
+| Lot | Percentage | Tokens | Raise |
+|-----+------------+--------+-------|
+| User Reward and Staking | 27.00% | 270,000,000 | |
+| Ecosystem | 22.80% | 228,000,000 | |
+| Private Sale | 17.51% | 175,125,000 | $5,253,750 |
+| Team and Advisors | 17.50% | 175,000,000 | |
+| Liquidity | 10.00% | 100,000,000 | |
+| Public Sale | 3.19% | 31,875,000 | $1,275,000 |
+| Pre-Listing Partners | 1.50% | 15,000,000 | $150,000 |
+| Marketing | 0.50% | 5,000,000 | $300,000 |
+
+** Reward Mechanisms
+
+- *Integrity reward*: W tokens for creating content with good integrity (immutable birth information)
+- *Verification reward*: W tokens for backing content authenticity (Professional Trust: expert reputation; Social Trust: community consensus)
+- *Staking reward*: Distributed to staking participants; staked tokens enable governance
+
+** Network Apps (W Token Use Cases)
+
+W is the payment currency for: Verification, Storage, Marketplace Listing, 3rd-Party Photo Services, Photo Licensing, Media Subscriptions.
+
+* Verified Real-World Deployments
+
+These validate the concept W is building:
+
+| Use Case | Date | Details |
+|----------+------+---------|
+| Reuters photojournalism | Aug 2023 | Authentication platform for trust in photojournalism |
+| 2020 US Presidential Election | Nov 2020 | Reuters used Numbers for photo verification |
+| Taiwan Presidential Election | Jan 2024 | Election coverage authentication |
+| India General Election | Apr 2024 | Media verification initiative |
+| Indonesia Presidential Election | Feb 2024 | Election content authentication |
+| Ukraine war crimes | 2022 | USC Shoah Foundation partnership; CNN coverage |
+| Rolling Stone Bosnia investigation | Dec 2022 | Emmy-nominated; blockchain-verified evidence |
+| Climate change documentation | Sep 2022 | Verified environmental photo collections |
+| Vehicle resale transparency | Oct 2022 | Automotive repair documentation |
+
+Key investors: Phil Chen (Race Capital/HTC), Steve Chen (YouTube co-founder), Kevin Lin (Twitch co-founder/COO), Binance, National Development Fund.
+
+* Comparative Analysis: W vs Number 
+
+** Shared Architecture
+
+Both projects use:
+- IPFS/Filecoin for content storage
+- Blockchain for integrity records
+- C2PA standard for provenance metadata
+- NFTs for ownership tracking
+- Mobile camera app as primary capture tool
+- Commit-based history model (Git-like)
+
+** Key Differences
+
+| Dimension | W | W |
+|-----------+------------------+---|
+| Blockchain | Own L1 (Arbitrum) | Arbitrum (Ethereum L2) |
+| Liveness proof | None (metadata only) | Camera Flash Signature |
+| Token dependency | W required for every write operation | No token planned |
+| Verification cost | 0.2 W per search | Free verification target |
+| Primary positioning | Creator economy / monetization | Truth / journalism / censorship resistance |
+| C2PA integration | Optional injection point | Embedded at capture with CFS |
+| Security inheritance | Own validator set | Ethereum's security via Arbitrum |
+| Device integrity | integrityCid (spoofable metadata) | CFS (cryptographic liveness proof) |
+| Platform | Android + iOS | Android first |
+
+** W's Competitive Advantages
+
+1. *Camera Flash Signature*: The single strongest differentiator. Numbers has zero liveness proof. Their W Camera App collects device metadata (integrityCid) but cannot prove a real camera took the photo. CFS is W's moat.
+
+2. *No token gate*: Numbers charges W for every operation. This creates friction for adoption. W can make basic verification free and charge only for premium features.
+
+3. *Stronger security inheritance*: Arbitrum inherits Ethereum's validator security. Numbers runs its own L1 subnet with a smaller, less battle-tested validator set.
+
+4. *Censorship resistance*: Numbers positions as a creator economy tool. W positions for journalism, human rights documentation, and anti-censorship. This is a fundamentally different and underserved market.
+
+5. *C2PA at capture time*: Numbers treats C2PA as an import mechanism for files created elsewhere. W embeds C2PA manifests during capture with integrated CFS proof, creating a strictly stronger provenance chain.
+
+** What W Should Adopt from Numbers
+
+1. *Git-like commit model*: The Commit Contract + AssetTree pattern is proven and well-designed. W's CommitRegister should follow a similar structure.
+
+2. *CID-as-identity (EIP-7053)*: Using the IPFS content hash as the canonical asset ID is elegant and standard. W should adopt this.
+
+3. *Free reads, paid writes*: Reading commit history costs nothing in Numbers. This is the right model for maximizing verification reach.
+
+4. *Nit-style CLI*: A developer-friendly abstraction over blockchain complexity. W should build equivalent tooling from the start.
+
+5. *Verify Engine similarity search*: AI-powered near-duplicate detection adds value beyond exact-match lookups. W should include this.
+
+6. *AssetTree schema*: The 21-field JSON metadata structure is well-thought-out. W should use a compatible schema extended with CFS-specific fields.
+
+7. *IPTC digitalSourceType vocabulary*: Standard categorization of content origin (digital capture, AI-generated, etc.) is essential for W's use case.
+
+** Risks and Gaps Revealed by Numbers
+
+1. *Adoption despite investment*: Numbers has been live since 2020 with real partnerships (Reuters, elections) and notable investors, yet mainstream adoption remains unclear. W enters late but with stronger technology.
+
+2. *Token economics as friction*: Every API call in Numbers costs W tokens. This creates a barrier for the journalism and human rights communities W targets.
+
+3. *Metadata-only integrity is spoofable*: Numbers' integrityCid collects device metadata (battery level, GPS, OS version) but this data can be fabricated on a rooted device. CFS addresses this with a cryptographic proof that requires physical hardware interaction.
+
+4. *Own L1 complexity*: Running a custom Arbitrum adds operational burden. W using Arbitrum is operationally simpler and benefits from a larger ecosystem.
+
+* Design Decisions
+
+** DD-001: Auto-mint Custody NFT on initial registration
+
+*Decision*: The Custody NFT is minted automatically when a media file is first registered. One transaction covers both commit and ownership.
+
+*Rationale*: Simplest UX, ensures every registered asset has a clear owner from the start. The CFS proof already validates authorship, so decoupling minting adds complexity without benefit.
+
+*Alternatives rejected*: Separate mint transaction (extra step, no gain), claim window (unnecessary complexity for W's use case).
+
+** DD-002: Camera app as sole minting authority via on-chain CFS verification
+
+*Decision*: Only a valid Camera Flash Signature proof can trigger minting. The proof is verified on-chain by the CFS Verifier contract (Stylus/Rust), not by a backend relay.
+
+*Rationale*:
+- *Trustless*: No backend key to compromise. Verification is math on-chain.
+- *Censorship resistant*: A relay can be shut down or pressured. An on-chain verifier cannot. Critical for journalism and human rights use cases.
+- *Auditable*: Verification logic is public, immutable, and inspectable.
+
+*Alternatives rejected*: Server-side relay (single point of failure, trust assumption), permissioned minter without CFS check (breaks authenticity guarantee).
+
+** DD-003: Immutable token URI
+
+*Decision*: Token URI is set at mint time and can never be updated. Points to the original AssetTree on IPFS.
+
+*Rationale*: The Custody NFT's job is to certify origin — the moment of capture with CFS proof. If the URI can be swapped, the NFT no longer proves what it claims. Commit history (subsequent metadata, license changes, verification events) is readable from the Commit contract. The NFT points to the moment of truth and nothing else.
+
+*Alternatives rejected*: Updatable URI (breaks provenance guarantee), dual URI with mutable "latest" pointer (unnecessary complexity, history belongs in Commit contract).
+
+** DD-004: Nid-derived token IDs
+
+*Decision*: Token ID is =uint256(keccak256(nid))= — deterministic from the IPFS content identifier.
+
+*Rationale*: Aligns with EIP-7053 "CID-as-identity" principle. Anyone with the file can compute the token ID without querying the chain. No storage needed for mapping tables. Collision risk on keccak256 is negligible.
+
+*Alternatives rejected*: Auto-increment (requires bidirectional mapping, loses content-addressable property).
+
+** DD-005: Stylus for CFS verification, Solidity for ERC-721
+
+*Decision*: Split architecture. CFS Verifier in Rust/Stylus, Custody NFT in Solidity.
+
+*Rationale*: CFS verification involves cryptographic operations where Stylus is 10-100x cheaper than EVM. Solidity ERC-721 uses OpenZeppelin (battle-tested, marketplace-compatible). Best of both worlds.
+
+*Alternatives rejected*: Unified Stylus contract (would reimplement ERC-721 in Rust with less audited tooling), pure Solidity (prohibitively expensive for crypto verification on-chain).
+
+** DD-006: EIP-2981 for royalties
+
+*Decision*: Standard EIP-2981 royalty interface. Single recipient, updatable by NFT holder.
+
+*Rationale*: Widely supported by marketplaces (OpenSea, Blur). Simple. If multi-party splits are needed later, the royalty recipient can be set to a splitter contract.
+
+*Alternatives rejected*: Custom on-chain royalty splitting (premature complexity), no royalties (limits monetization from day one).
+
+* Appendix: API Quick Reference
+
+** Endpoints Summary
+
+| Operation | Method | URL | Cost |
+|-----------+--------+-----+------|
+| Asset Search | POST | https://us-central1-w-protocol-api.cloudfunctions.net/asset-search | 0.2 W |
+| Commit to  | POST | https://us-central1-w-protocol-api.cloudfunctions.net/nit-commit-to-jade | 0.1 W |
+| Read Commits | GET | https://e23hi68y55.execute-api.us-east-1.amazonaws.com/default/get-commits-storage-backend-jade-near | Free |
+
+** HTTP Status Codes (All Endpoints)
+
+| Code | Meaning |
+|------+---------|
+| 200 | Success |
+| 400 | Bad Request |
+| 401 | Unauthorized |
+| 403 | Forbidden |
+| 500 | Internal Server Error |
+
+** Example: Register + Commit + Read (Python)
+
+#+begin_src python
+import requests
+
+CAPTURE_TOKEN = "your_token"
+HEADERS = {
+    "Content-Type": "application/json",
+    "Authorization": f"token {CAPTURE_TOKEN}"
+}
+
+# 1. Commit an asset
+commit_data = {
+    "encodingFormat": "image/jpeg",
+    "assetCid": "bafybei...",
+    "assetTimestampCreated": 1674556617,
+    "assetCreator": "Photographer Name",
+    "assetSha256": "32ff5bc7ec494005c01df4a8da67f7ef5a95037de2f7863e3d463b4697447739"
+}
+
+commit_response = requests.post(
+    "https://us-central1-w-protocol-api.cloudfunctions.net/nit-commit-to-jade",
+    headers=HEADERS,
+    json=commit_data
+)
+# Returns: txHash, assetCid, assetTreeCid, explorer URL
+
+# 2. Search for an asset
+search_response = requests.post(
+    "https://us-central1-w-protocol-api.cloudfunctions.net/asset-search",
+    headers=HEADERS,
+    json={"nid": "bafybei..."}
+)
+# Returns: preciseSearch, similarSearch (nids + distances)
+
+# 3. Read commit history (free)
+read_response = requests.get(
+    "https://e23hi68y55.execute-api.us-east-1.amazonaws.com/default/get-commits-storage-backend-jade-near",
+    headers=HEADERS,
+    params={"nid": "bafybei..."}
+)
+# Returns: array of commits with full provenance data
+#+end_src
+
+** Example: Nit CLI Workflow
+
+#+begin_src shell
+# Install
+yarn global add @wprotocol/nit
+
+# Initialize with your credentials
+nit init
+
+# Create working directory
+mkdir ~/media-project && cd ~/media-project
+
+# Register a photo (creates assetTree on IPFS)
+nit add photo.jpg -m "Initial registration"
+
+# Verify before committing
+nit status
+
+# Commit to W blockchain
+nit commit -m "Register war-zone photograph"
+
+# View the asset on IPFS
+# https://<Nid>.ipfs.dweb.link
+#+end_src
