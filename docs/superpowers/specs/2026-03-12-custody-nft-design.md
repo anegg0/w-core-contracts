@@ -129,11 +129,12 @@ event RoyaltyUpdated(uint256 indexed tokenId, address receiver, uint96 feeNumera
 | Caller lacks `MINTER_ROLE` | `AccessControlUnauthorizedAccount` |
 | Token ID already exists | `AssetAlreadyRegistered(nid)` |
 | `updateRoyalty` caller is not holder | `NotTokenHolder(tokenId)` |
-| `nidOf` for nonexistent token | `AssetNotFound(tokenId)` |
-| `tokenIdOf` for unregistered nid | `AssetNotFound(nid)` |
+| `nidOf` for nonexistent token | `TokenNotFound(tokenId)` |
+| `tokenIdOf` for unregistered nid | `NidNotRegistered(nid)` |
 | `royaltyFee` exceeds 10000 | `RoyaltyFeeTooHigh(feeNumerator)` |
 | `to` is zero address | `InvalidRecipient()` |
 | `nid` is empty string | `InvalidNid()` |
+| `updateRoyalty` receiver is zero address | `InvalidRoyaltyReceiver()` |
 
 ## Testing Strategy
 
