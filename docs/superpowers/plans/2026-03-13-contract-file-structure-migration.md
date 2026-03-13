@@ -4,7 +4,7 @@
 
 **Goal:** Reorganize `contracts/` from a flat Foundry project into a monorepo structure supporting both Solidity (Foundry) and Arbitrum Stylus (Rust) contracts with shared interfaces.
 
-**Architecture:** Move existing Solidity files into `contracts/solidity/`, extract a shared `IWCustodyNFT.sol` interface into `contracts/interfaces/`, and create a symlink so Foundry can resolve it. Stylus and integration directories are deferred until VCP Verifier development begins.
+**Architecture:** Move existing Solidity files into `contracts/solidity/`, extract a shared `IWCustodyNFT.sol` interface into `contracts/interfaces/`, and create a symlink so Foundry can resolve it. Stylus and integration directories are deferred until CP Verifier development begins.
 
 **Tech Stack:** Foundry (Solidity 0.8.28), OpenZeppelin v5.6.1, forge-std
 
@@ -52,6 +52,7 @@
 ```bash
 cd /Users/allup/Nextcloud/orgmode/w/w-code
 git rm -r --cached contracts/out/ 2>/dev/null; true
+git rm -r --cached contracts/cache/ 2>/dev/null; true
 ```
 
 Expected: files removed from index (or "did not match any files" if already untracked)
@@ -59,7 +60,7 @@ Expected: files removed from index (or "did not match any files" if already untr
 - [ ] **Step 2: Delete the directories**
 
 ```bash
-rm -rf contracts/out contracts/cache contracts/rust
+trash contracts/out contracts/cache contracts/rust
 ```
 
 - [ ] **Step 3: Verify clean state**
@@ -73,7 +74,7 @@ Expected: `lib/  script/  src/  test/  foundry.toml  .gitignore  README.md`
 - [ ] **Step 4: Commit**
 
 ```bash
-git add -A contracts/out contracts/cache contracts/rust
+git add contracts/out contracts/cache contracts/rust
 git commit -m "Remove build artifacts and empty rust/ placeholder"
 ```
 
@@ -133,7 +134,7 @@ Expected: all tests pass (same results as before the move)
 
 ```bash
 cd /Users/allup/Nextcloud/orgmode/w/w-code
-git add -A
+git add contracts/
 git commit -m "Move Foundry project into contracts/solidity/"
 ```
 
@@ -194,8 +195,6 @@ interface IWCustodyNFT {
     function nidOf(uint256 tokenId) external view returns (string memory);
 
     function tokenIdOf(string calldata nid) external view returns (uint256);
-
-    function tokenURI(uint256 tokenId) external view returns (string memory);
 }
 ```
 
@@ -260,7 +259,7 @@ Expected: compilation succeeds
 
 ```bash
 cd /Users/allup/Nextcloud/orgmode/w/w-code
-git add -A
+git add contracts/solidity/interfaces contracts/solidity/foundry.toml
 git commit -m "Add interfaces symlink and @interfaces/ remapping to foundry.toml"
 ```
 
@@ -320,15 +319,13 @@ Expected: compilation succeeds with no errors
 forge test -vv
 ```
 
-Expected: all tests pass. Some tests reference `WCustodyNFT.AssetMinted` and `WCustodyNFT.AssetAlreadyRegistered` etc. — these still work because Solidity inherits events/errors from interfaces.
-
-If any tests fail due to event/error selector changes, update the test references to use `IWCustodyNFT.EventName` instead of `WCustodyNFT.EventName`. However, Solidity should resolve both since `WCustodyNFT is IWCustodyNFT`.
+Expected: all tests pass. No test changes needed — `WCustodyNFT.AssetMinted`, `WCustodyNFT.AssetAlreadyRegistered`, etc. resolve to the inherited declarations from `IWCustodyNFT`. Solidity 0.8.28 allows referring to inherited events/errors via the derived contract name.
 
 - [ ] **Step 4: Commit**
 
 ```bash
 cd /Users/allup/Nextcloud/orgmode/w/w-code
-git add -A
+git add contracts/solidity/src/WCustodyNFT.sol
 git commit -m "Implement IWCustodyNFT interface in WCustodyNFT"
 ```
 
@@ -434,9 +431,9 @@ git commit -m "Update CLAUDE.md with new contract directory structure"
 
 The README currently references CFS (outdated) and has `cd contracts`. Update:
 
-1. Replace "Camera Flash Signature (CFS)" references with "Verified Capture Protocol (VCP)" in the description
+1. Replace "Camera Flash Signature (CFS)" references with "Capture Protocol (CP)" in the description
 2. Replace "CFS Verifier" with "CP Verifier" in the architecture table
-3. Replace "CFS proof" with "VCP attestation"
+3. Replace "CFS proof" with "CP attestation"
 4. Update the build commands from `cd contracts` to `cd contracts/solidity`
 5. Update "Minting gated by role (CFS Verifier contract, once built)" to "Minting gated by role (CP Verifier Stylus contract, once built)"
 
@@ -445,7 +442,7 @@ The README currently references CFS (outdated) and has `cd contracts`. Update:
 ```bash
 cd /Users/allup/Nextcloud/orgmode/w/w-code
 git add README.md
-git commit -m "Update README.md with new paths and VCP terminology"
+git commit -m "Update README.md with new paths and CP terminology"
 ```
 
 ---
@@ -455,11 +452,14 @@ git commit -m "Update README.md with new paths and VCP terminology"
 **Files:**
 - Modify: `.gitignore`
 
-- [ ] **Step 1: Add Rust/Stylus patterns for future use**
+- [ ] **Step 1: Update broadcast path and add Rust patterns**
 
-Add to `.gitignore`:
+In `.gitignore`, change `contracts/broadcast/` to `contracts/solidity/broadcast/` and add Rust patterns:
 
 ```gitignore
+# Foundry (contracts/solidity/ has its own .gitignore for cache/out)
+contracts/solidity/broadcast/
+
 # Rust/Stylus (for future contracts/stylus/)
 target/
 ```
@@ -469,7 +469,7 @@ target/
 ```bash
 cd /Users/allup/Nextcloud/orgmode/w/w-code
 git add .gitignore
-git commit -m "Add Rust target/ to .gitignore for future Stylus contracts"
+git commit -m "Update .gitignore: fix broadcast path, add Rust target/"
 ```
 
 ---
@@ -482,7 +482,7 @@ git commit -m "Add Rust target/ to .gitignore for future Stylus contracts"
 
 ```bash
 cd /Users/allup/Nextcloud/orgmode/w/w-code/contracts/solidity
-rm -rf out cache
+trash out cache 2>/dev/null; true
 forge build
 ```
 
