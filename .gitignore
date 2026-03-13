@@ -14,8 +14,11 @@ Thumbs.db
 .env
 .env.*
 
-# Foundry (contracts/ has its own .gitignore for cache/out)
-contracts/broadcast/
+# Foundry (contracts/solidity/ has its own .gitignore for cache/out)
+contracts/solidity/broadcast/
+
+# Rust/Stylus (for future contracts/stylus/)
+target/
 
 # Node (if added later)
 node_modules/
