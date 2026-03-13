@@ -1,19 +1,19 @@
-#+TITLE: W Technical Reference
+#+TITLE: IRL Technical Reference
 #+AUTHOR: Gael Blanchemain
-#+FILETAGS: :W:competitor:reference:
+#+FILETAGS: :IRL:competitor:reference:
 #+STARTUP: overview
 
 * Purpose
 
-This document is a technical reference for W. It is intended for use while building W, to understand its the architecture and to inform our design decisions.
+This document is a technical reference for IRL. It is intended for use while building IRL, to understand its the architecture and to inform our design decisions.
 
 Source material:
-- W developer docs (consulted March 2026)
-- W Token whitepaper v RC10, November 2021
+- IRL developer docs (consulted March 2026)
+- IRL Token whitepaper v RC10, November 2021
 
-* W at a Glance
+* IRL at a Glance
 
-W is a decentralized photo network that transforms digital media into verifiable Web3 assets. It uses blockchain storage, IPFS, NFTs, and the C2PA standard to create traceable provenance records for images and videos.
+IRL is a decentralized photo network that transforms digital media into verifiable Web3 assets. It uses blockchain storage, IPFS, NFTs, and the C2PA standard to create traceable provenance records for images and videos.
 
 Key facts:
 - *Founded*: Not yet 
@@ -30,10 +30,10 @@ Key facts:
 | Layer | Component | Purpose |
 |-------+-----------+---------|
 |     5 | Asset Profiles & Search | Verify Engine: discovery, search, verification |
-|     4 | W Camera App | "World's first blockchain camera" (Android + iOS) |
+|     4 | IRL Camera App | "World's first blockchain camera" (Android + iOS) |
 |     3 | Framework Tools | Nit CLI, APIs, Network Actions, Asset Explorer |
 |     2 | Asset Smart Contracts | Commit, Asset, and Collection contracts |
-|     1 | W Blockchain | Arbitrum L1 ( mainnet, Snow testnet) |
+|     1 | IRL Blockchain | Arbitrum L1 ( mainnet, Snow testnet) |
 
 ** Network Participants
 
@@ -41,7 +41,7 @@ Key facts:
 - *Asset Retrievers*: Pay to collect or license photos, payments flow back to creators
 - *Network Operators*: Storage providers, maintain accessibility and permanence
 - *Verifiers*: Perform integrity checks, provide professional/social trust signals
-- *Content Moderators*: Ensures medias comply with W's Content policy
+- *Content Moderators*: Ensures medias comply with IRL's Content policy
 
 ** Four Storage Technologies
 
@@ -52,7 +52,7 @@ Key facts:
 
 ** Network Tools (Capture, Seal, Trace)
 
-- *W Camera App*: Blockchain camera for Android and iOS. Collects metadata, generates integrity records, establishes ownership at creation. Used in 90+ countries.
+- *IRL Camera App*: Blockchain camera for Android and iOS. Collects metadata, generates integrity records, establishes ownership at creation. Used in 90+ countries.
 - *Seal API*: Developer API for creating, registering, and retrieving assets programmatically. Rich API set for ecosystem applications.
 - *Trace Site*: Web viewer for photo injection and on-chain history. Shows birth information (who, when, where). Helps users claim copyright.
 
@@ -65,11 +65,11 @@ Key facts:
 | Chain ID | TBD | TBD |
 | RPC URL | TBS | TBD |
 | Explorer | TBD | TBD |
-| Currency | W | W (faucet: TBD)  |
+| Currency | IRL | IRL (faucet: TBD)  |
 
 ** Technology
 
-Built on Arbitrum, which allows W to define its own networking, execution logic, and fee structure.
+Built on Arbitrum, which allows IRL to define its own networking, execution logic, and fee structure.
 
 ** Smart Contracts (3 Contracts)
 
@@ -123,7 +123,7 @@ tokenIdOf(string nid) → uint256
 
 | Role | Granted To | Permissions |
 |------+------------+-------------|
-| DEFAULT_ADMIN_ROLE | Deployer (W multisig) | Grant/revoke roles |
+| DEFAULT_ADMIN_ROLE | Deployer (IRL multisig) | Grant/revoke roles |
 | MINTER_ROLE | CFS Verifier (future), mock minter (testing) | Call mint |
 | NFT holder | Per-token | updateRoyalty, transfer |
 
@@ -151,8 +151,8 @@ The Nid is a 59-character string cryptographically generated from the file conte
 
 The workflow to convert a media file into a Web3 asset:
 
-1. *Data Preparation*: Add metadata (creator, description, generation details) and create a digital signature. W Camera App automates this.
-2. *Blockchain Registration*: Upload via API or W Camera App. System generates Nid, initial Commit, and AssetTree on-chain.
+1. *Data Preparation*: Add metadata (creator, description, generation details) and create a digital signature. IRL Camera App automates this.
+2. *Blockchain Registration*: Upload via API or IRL Camera App. System generates Nid, initial Commit, and AssetTree on-chain.
 3. *Monitor and Govern*: AI-powered scanning and human-review for improper usage. Custody NFTs grant ownership certificates for policy definition.
 4. *Monetization*: Create Asset Contracts for royalty distribution. Mint License NFTs tradeable on marketplaces.
 5. *Commit and Trace*: Subsequent modifications tracked as Commits. Complete history traceable and verifiable.
@@ -188,11 +188,11 @@ Commits are Git-like version control records for media files. They are immutable
   "assetTreeSignature": "0x...",
   "author": "0x40ea78e78f3cF0FAcc...",
   "committer": "0x51130dB91B91377A24d6...",
-  "provider": "W",
+  "provider": "IRL",
   "timestampCreated": 1654837301,
   "action": "Initial Registration",
   "actionResult": "https://ipfs.io/ipfs/...",
-  "abstract": "Initial registration on W "
+  "abstract": "Initial registration on IRL"
 }
 #+end_src
 
@@ -265,7 +265,7 @@ The integrityCid field references tamper-proof metadata collected by the capture
 - Proof hash: cryptographic fingerprint of content
 - Capture timestamp and MIME type
 
-NOTE: This is metadata-only integrity. There is no equivalent to W's Camera Flash Signature liveness proof. The device data can be spoofed on a compromised device.
+NOTE: This is metadata-only integrity. There is no equivalent to IRL's Camera Flash Signature liveness proof. The device data can be spoofed on a compromised device.
 
 *** nftRecord: Multi-Chain NFT Tracking
 
@@ -302,19 +302,19 @@ Authorization: token YOUR_CAPTURE_TOKEN
 
 | Operation | Cost |
 |-----------+------|
-| Asset Registration | Pay-per-use (W tokens) |
-| Asset Search | 0.2 W + ~0.004 W gas |
-| Commit to  | 0.1 W + ~0.004 W gas |
+| Asset Registration | Pay-per-use (IRL tokens) |
+| Asset Search | 0.2 IRL + ~0.004 IRL gas |
+| Commit to  | 0.1 IRL + ~0.004 IRL gas |
 | Read Commits | Free |
-| Storage (post-registration) | 0.1 W/file/month |
+| Storage (post-registration) | 0.1 IRL/file/month |
 
-No gas cost if paying with Credits instead of W.
+No gas cost if paying with Credits instead of IRL.
 
 ** API Reference
 
 *** Initial Asset Registration
 
-Registers a new asset on the W blockchain. Creates first commit, pins content to IPFS with Filecoin backup, makes asset discoverable via Verify Engine.
+Registers a new asset on the IRL blockchain. Creates first commit, pins content to IPFS with Filecoin backup, makes asset discoverable via Verify Engine.
 
 - Returns the asset's *Nid*
 - IPFS pins remain accessible for one month post-registration (extendable)
@@ -329,7 +329,7 @@ Registers a new asset on the W blockchain. Creates first commit, pins content to
 |-----------+------+-------------|
 | fileURL | string | Direct file URL |
 | file | object | Direct file upload |
-| nid | string | W ID lookup |
+| nid | string | IRL ID lookup |
 
 *Optional:*
 | Parameter | Type | Description |
@@ -393,7 +393,7 @@ Registers a new asset on the W blockchain. Creates first commit, pins content to
 }
 #+end_src
 
-Default committer: W wallet (0x51130dB91B91377A24d6Ebeb2a5fC02748b53ce1). Author remains the user's Capture Wallet address.
+Default committer: IRL wallet (0x51130dB91B91377A24d6Ebeb2a5fC02748b53ce1). Author remains the user's Capture Wallet address.
 
 *** Read Commits
 
@@ -424,7 +424,7 @@ Default committer: W wallet (0x51130dB91B91377A24d6Ebeb2a5fC02748b53ce1). Author
       "actionName": "Initial Registration",
       "actionNid": "bafybei...",
       "actionResult": "https://ipfs.io/ipfs/...",
-      "abstract": "Initial registration on W "
+      "abstract": "Initial registration on IRL"
     }
   ]
 }
@@ -436,12 +436,12 @@ This endpoint is *free* (no token cost).
 
 ** Nit: Git for Media Files
 
-Nit is W's open-source CLI tool and JavaScript module for managing Web3 digital asset history on the blockchain.
+Nit is IRL's open-source CLI tool and JavaScript module for managing Web3 digital asset history on the blockchain.
 
 - *Install*: yarn global add @wprotocol/nit
 - *License*: MIT
 - *Repository*: https://github.com/wprotocol/nit
-- *Supported networks*: W Blockchain, Arbitrum C-Chain
+- *Supported networks*: IRL Blockchain, Arbitrum C-Chain
 
 *** Workflow
 
@@ -484,15 +484,15 @@ A no-code integration for the Bubble platform allowing commit creation and histo
 
 * Token Economics
 
-** W Token
+** IRL Token
 
 | Property | Value |
 |----------+-------|
-| Token Name | W Token   |
-| Ticker | W   |
+| Token Name | IRL Token   |
+| Ticker | IRL   |
 | Type | ERC-20 (bridgeable to BEP-20) |
 | Total Supply | 1,000,000,000 |
-| Native chain | W Blockchain () |
+| Native chain | IRL Blockchain () |
 
 ** Token Allocation
 
@@ -509,17 +509,17 @@ A no-code integration for the Bubble platform allowing commit creation and histo
 
 ** Reward Mechanisms
 
-- *Integrity reward*: W tokens for creating content with good integrity (immutable birth information)
-- *Verification reward*: W tokens for backing content authenticity (Professional Trust: expert reputation; Social Trust: community consensus)
+- *Integrity reward*: IRL tokens for creating content with good integrity (immutable birth information)
+- *Verification reward*: IRL tokens for backing content authenticity (Professional Trust: expert reputation; Social Trust: community consensus)
 - *Staking reward*: Distributed to staking participants; staked tokens enable governance
 
-** Network Apps (W Token Use Cases)
+** Network Apps (IRL Token Use Cases)
 
 W is the payment currency for: Verification, Storage, Marketplace Listing, 3rd-Party Photo Services, Photo Licensing, Media Subscriptions.
 
 * Verified Real-World Deployments
 
-These validate the concept W is building:
+These validate the concept IRL is building:
 
 | Use Case | Date | Details |
 |----------+------+---------|
@@ -535,7 +535,7 @@ These validate the concept W is building:
 
 Key investors: Phil Chen (Race Capital/HTC), Steve Chen (YouTube co-founder), Kevin Lin (Twitch co-founder/COO), Binance, National Development Fund.
 
-* Comparative Analysis: W vs Number 
+* Comparative Analysis: IRL vs Number 
 
 ** Shared Architecture
 
@@ -549,55 +549,55 @@ Both projects use:
 
 ** Key Differences
 
-| Dimension | W | W |
+| Dimension | IRL | Numbers |
 |-----------+------------------+---|
 | Blockchain | Own L1 (Arbitrum) | Arbitrum (Ethereum L2) |
 | Liveness proof | None (metadata only) | Camera Flash Signature |
-| Token dependency | W required for every write operation | No token planned |
-| Verification cost | 0.2 W per search | Free verification target |
+| Token dependency | IRL required for every write operation | No token planned |
+| Verification cost | 0.2 IRL per search | Free verification target |
 | Primary positioning | Creator economy / monetization | Truth / journalism / censorship resistance |
 | C2PA integration | Optional injection point | Embedded at capture with CFS |
 | Security inheritance | Own validator set | Ethereum's security via Arbitrum |
 | Device integrity | integrityCid (spoofable metadata) | CFS (cryptographic liveness proof) |
 | Platform | Android + iOS | Android first |
 
-** W's Competitive Advantages
+** IRL's Competitive Advantages
 
-1. *Camera Flash Signature*: The single strongest differentiator. Numbers has zero liveness proof. Their W Camera App collects device metadata (integrityCid) but cannot prove a real camera took the photo. CFS is W's moat.
+1. *Camera Flash Signature*: The single strongest differentiator. Numbers has zero liveness proof. Their IRL Camera App collects device metadata (integrityCid) but cannot prove a real camera took the photo. CFS is IRL's moat.
 
-2. *No token gate*: Numbers charges W for every operation. This creates friction for adoption. W can make basic verification free and charge only for premium features.
+2. *No token gate*: Numbers charges IRL for every operation. This creates friction for adoption. IRL can make basic verification free and charge only for premium features.
 
 3. *Stronger security inheritance*: Arbitrum inherits Ethereum's validator security. Numbers runs its own L1 subnet with a smaller, less battle-tested validator set.
 
-4. *Censorship resistance*: Numbers positions as a creator economy tool. W positions for journalism, human rights documentation, and anti-censorship. This is a fundamentally different and underserved market.
+4. *Censorship resistance*: Numbers positions as a creator economy tool. IRL positions for journalism, human rights documentation, and anti-censorship. This is a fundamentally different and underserved market.
 
-5. *C2PA at capture time*: Numbers treats C2PA as an import mechanism for files created elsewhere. W embeds C2PA manifests during capture with integrated CFS proof, creating a strictly stronger provenance chain.
+5. *C2PA at capture time*: Numbers treats C2PA as an import mechanism for files created elsewhere. IRL embeds C2PA manifests during capture with integrated CFS proof, creating a strictly stronger provenance chain.
 
-** What W Should Adopt from Numbers
+** What IRL Should Adopt from Numbers
 
-1. *Git-like commit model*: The Commit Contract + AssetTree pattern is proven and well-designed. W's CommitRegister should follow a similar structure.
+1. *Git-like commit model*: The Commit Contract + AssetTree pattern is proven and well-designed. IRL's CommitRegister should follow a similar structure.
 
-2. *CID-as-identity (EIP-7053)*: Using the IPFS content hash as the canonical asset ID is elegant and standard. W should adopt this.
+2. *CID-as-identity (EIP-7053)*: Using the IPFS content hash as the canonical asset ID is elegant and standard. IRL should adopt this.
 
 3. *Free reads, paid writes*: Reading commit history costs nothing in Numbers. This is the right model for maximizing verification reach.
 
-4. *Nit-style CLI*: A developer-friendly abstraction over blockchain complexity. W should build equivalent tooling from the start.
+4. *Nit-style CLI*: A developer-friendly abstraction over blockchain complexity. IRL should build equivalent tooling from the start.
 
-5. *Verify Engine similarity search*: AI-powered near-duplicate detection adds value beyond exact-match lookups. W should include this.
+5. *Verify Engine similarity search*: AI-powered near-duplicate detection adds value beyond exact-match lookups. IRL should include this.
 
-6. *AssetTree schema*: The 21-field JSON metadata structure is well-thought-out. W should use a compatible schema extended with CFS-specific fields.
+6. *AssetTree schema*: The 21-field JSON metadata structure is well-thought-out. IRL should use a compatible schema extended with CFS-specific fields.
 
-7. *IPTC digitalSourceType vocabulary*: Standard categorization of content origin (digital capture, AI-generated, etc.) is essential for W's use case.
+7. *IPTC digitalSourceType vocabulary*: Standard categorization of content origin (digital capture, AI-generated, etc.) is essential for IRL's use case.
 
 ** Risks and Gaps Revealed by Numbers
 
-1. *Adoption despite investment*: Numbers has been live since 2020 with real partnerships (Reuters, elections) and notable investors, yet mainstream adoption remains unclear. W enters late but with stronger technology.
+1. *Adoption despite investment*: Numbers has been live since 2020 with real partnerships (Reuters, elections) and notable investors, yet mainstream adoption remains unclear. IRL enters late but with stronger technology.
 
-2. *Token economics as friction*: Every API call in Numbers costs W tokens. This creates a barrier for the journalism and human rights communities W targets.
+2. *Token economics as friction*: Every API call in Numbers costs IRL tokens. This creates a barrier for the journalism and human rights communities IRL targets.
 
 3. *Metadata-only integrity is spoofable*: Numbers' integrityCid collects device metadata (battery level, GPS, OS version) but this data can be fabricated on a rooted device. CFS addresses this with a cryptographic proof that requires physical hardware interaction.
 
-4. *Own L1 complexity*: Running a custom Arbitrum adds operational burden. W using Arbitrum is operationally simpler and benefits from a larger ecosystem.
+4. *Own L1 complexity*: Running a custom Arbitrum adds operational burden. IRL using Arbitrum is operationally simpler and benefits from a larger ecosystem.
 
 * Design Decisions
 
@@ -607,7 +607,7 @@ Both projects use:
 
 *Rationale*: Simplest UX, ensures every registered asset has a clear owner from the start. The CFS proof already validates authorship, so decoupling minting adds complexity without benefit.
 
-*Alternatives rejected*: Separate mint transaction (extra step, no gain), claim window (unnecessary complexity for W's use case).
+*Alternatives rejected*: Separate mint transaction (extra step, no gain), claim window (unnecessary complexity for IRL's use case).
 
 ** DD-002: Camera app as sole minting authority via on-chain CFS verification
 
@@ -658,8 +658,8 @@ Both projects use:
 
 | Operation | Method | URL | Cost |
 |-----------+--------+-----+------|
-| Asset Search | POST | https://us-central1-w-protocol-api.cloudfunctions.net/asset-search | 0.2 W |
-| Commit to  | POST | https://us-central1-w-protocol-api.cloudfunctions.net/nit-commit-to-jade | 0.1 W |
+| Asset Search | POST | https://us-central1-w-protocol-api.cloudfunctions.net/asset-search | 0.2 IRL |
+| Commit to  | POST | https://us-central1-w-protocol-api.cloudfunctions.net/nit-commit-to-jade | 0.1 IRL |
 | Read Commits | GET | https://e23hi68y55.execute-api.us-east-1.amazonaws.com/default/get-commits-storage-backend-jade-near | Free |
 
 ** HTTP Status Codes (All Endpoints)
@@ -734,7 +734,7 @@ nit add photo.jpg -m "Initial registration"
 # Verify before committing
 nit status
 
-# Commit to W blockchain
+# Commit to IRL blockchain
 nit commit -m "Register war-zone photograph"
 
 # View the asset on IPFS

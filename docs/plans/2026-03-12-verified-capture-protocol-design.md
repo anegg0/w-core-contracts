@@ -248,7 +248,7 @@ IRL embeds as a custom C2PA assertion. Any C2PA-aware tool (Adobe Content Creden
 
 ```json
 {
-  "claim_generator": "W Camera/1.0",
+  "claim_generator": "IRL Camera/1.0",
   "assertions": [
     {
       "label": "c2pa.actions",
@@ -328,7 +328,7 @@ The on-chain verifier confirms: "a valid attested device signed this bundle, and
 
 | Component | Description |
 |---|---|
-| W Camera app (iOS) | AVCaptureSession-based, minimal ISP processing, two capture modes |
+| IRL Camera app (iOS) | AVCaptureSession-based, minimal ISP processing, two capture modes |
 | IRL bundle assembly | Composite attestation: image hash, timestamp, device attestation, IMU, recapture score |
 | Secure Enclave signing | App Attest key, per-capture assertion, Apple CA chain |
 | Recapture detection | On-device ML ensemble (moire, flicker, subpixel, texture, depth, IMU parallax) |
