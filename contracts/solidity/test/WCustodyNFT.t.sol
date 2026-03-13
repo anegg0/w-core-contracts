@@ -3,6 +3,7 @@ pragma solidity ^0.8.28;
 
 import {Test} from "forge-std/Test.sol";
 import {WCustodyNFT} from "../src/WCustodyNFT.sol";
+import {IWCustodyNFT} from "@interfaces/IWCustodyNFT.sol";
 
 contract WCustodyNFTTest is Test {
     WCustodyNFT public nft;
@@ -46,7 +47,7 @@ contract WCustodyNFTTest is Test {
         uint256 expected = uint256(keccak256(abi.encodePacked(NID)));
         vm.prank(minter);
         vm.expectEmit(true, true, false, true);
-        emit WCustodyNFT.AssetMinted(expected, NID, ASSET_TREE_CID, creator);
+        emit IWCustodyNFT.AssetMinted(expected, NID, ASSET_TREE_CID, creator);
         nft.mint(creator, NID, ASSET_TREE_CID, creator, 1000);
     }
 
@@ -89,7 +90,7 @@ contract WCustodyNFTTest is Test {
         uint256 tokenId = nft.mint(creator, NID, ASSET_TREE_CID, creator, 1000);
         vm.prank(creator);
         vm.expectEmit(true, false, false, true);
-        emit WCustodyNFT.RoyaltyUpdated(tokenId, other, 500);
+        emit IWCustodyNFT.RoyaltyUpdated(tokenId, other, 500);
         nft.updateRoyalty(tokenId, other, 500);
     }
 
@@ -105,25 +106,25 @@ contract WCustodyNFTTest is Test {
         vm.prank(minter);
         nft.mint(creator, NID, ASSET_TREE_CID, creator, 1000);
         vm.prank(minter);
-        vm.expectRevert(abi.encodeWithSelector(WCustodyNFT.AssetAlreadyRegistered.selector, NID));
+        vm.expectRevert(abi.encodeWithSelector(IWCustodyNFT.AssetAlreadyRegistered.selector, NID));
         nft.mint(creator, NID, ASSET_TREE_CID, creator, 1000);
     }
 
     function test_mint_reverts_zero_address() public {
         vm.prank(minter);
-        vm.expectRevert(WCustodyNFT.InvalidRecipient.selector);
+        vm.expectRevert(IWCustodyNFT.InvalidRecipient.selector);
         nft.mint(address(0), NID, ASSET_TREE_CID, creator, 1000);
     }
 
     function test_mint_reverts_empty_nid() public {
         vm.prank(minter);
-        vm.expectRevert(WCustodyNFT.InvalidNid.selector);
+        vm.expectRevert(IWCustodyNFT.InvalidNid.selector);
         nft.mint(creator, "", ASSET_TREE_CID, creator, 1000);
     }
 
     function test_mint_reverts_royalty_too_high() public {
         vm.prank(minter);
-        vm.expectRevert(abi.encodeWithSelector(WCustodyNFT.RoyaltyFeeTooHigh.selector, uint96(10_001)));
+        vm.expectRevert(abi.encodeWithSelector(IWCustodyNFT.RoyaltyFeeTooHigh.selector, uint96(10_001)));
         nft.mint(creator, NID, ASSET_TREE_CID, creator, 10_001);
     }
 
@@ -131,7 +132,7 @@ contract WCustodyNFTTest is Test {
         vm.prank(minter);
         uint256 tokenId = nft.mint(creator, NID, ASSET_TREE_CID, creator, 1000);
         vm.prank(other);
-        vm.expectRevert(abi.encodeWithSelector(WCustodyNFT.NotTokenHolder.selector, tokenId));
+        vm.expectRevert(abi.encodeWithSelector(IWCustodyNFT.NotTokenHolder.selector, tokenId));
         nft.updateRoyalty(tokenId, other, 500);
     }
 
@@ -139,7 +140,7 @@ contract WCustodyNFTTest is Test {
         vm.prank(minter);
         uint256 tokenId = nft.mint(creator, NID, ASSET_TREE_CID, creator, 1000);
         vm.prank(creator);
-        vm.expectRevert(abi.encodeWithSelector(WCustodyNFT.RoyaltyFeeTooHigh.selector, uint96(10_001)));
+        vm.expectRevert(abi.encodeWithSelector(IWCustodyNFT.RoyaltyFeeTooHigh.selector, uint96(10_001)));
         nft.updateRoyalty(tokenId, creator, 10_001);
     }
 
@@ -147,17 +148,17 @@ contract WCustodyNFTTest is Test {
         vm.prank(minter);
         uint256 tokenId = nft.mint(creator, NID, ASSET_TREE_CID, creator, 1000);
         vm.prank(creator);
-        vm.expectRevert(WCustodyNFT.InvalidRoyaltyReceiver.selector);
+        vm.expectRevert(IWCustodyNFT.InvalidRoyaltyReceiver.selector);
         nft.updateRoyalty(tokenId, address(0), 500);
     }
 
     function test_nidOf_reverts_nonexistent_token() public {
-        vm.expectRevert(abi.encodeWithSelector(WCustodyNFT.TokenNotFound.selector, uint256(999)));
+        vm.expectRevert(abi.encodeWithSelector(IWCustodyNFT.TokenNotFound.selector, uint256(999)));
         nft.nidOf(999);
     }
 
     function test_tokenIdOf_reverts_unregistered_nid() public {
-        vm.expectRevert(abi.encodeWithSelector(WCustodyNFT.NidNotRegistered.selector, "bafyunknown"));
+        vm.expectRevert(abi.encodeWithSelector(IWCustodyNFT.NidNotRegistered.selector, "bafyunknown"));
         nft.tokenIdOf("bafyunknown");
     }
 

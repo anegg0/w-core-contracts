@@ -5,27 +5,16 @@ import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import {ERC721URIStorage} from "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import {ERC2981} from "@openzeppelin/contracts/token/common/ERC2981.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
+import {IWCustodyNFT} from "@interfaces/IWCustodyNFT.sol";
 
 /// @title WCustodyNFT
 /// @notice ERC-721 representing exclusive ownership of a media asset captured with Camera Signature.
 /// @dev One NFT per asset. Token ID = uint256(keccak256(nid)). URI is immutable after mint.
-contract WCustodyNFT is ERC721, ERC721URIStorage, ERC2981, AccessControl {
+contract WCustodyNFT is ERC721, ERC721URIStorage, ERC2981, AccessControl, IWCustodyNFT {
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
 
     mapping(uint256 tokenId => string nid) private _tokenNids;
     mapping(bytes32 nidHash => bool registered) private _registeredNids;
-
-    event AssetMinted(uint256 indexed tokenId, string nid, string assetTreeCid, address indexed to);
-    event RoyaltyUpdated(uint256 indexed tokenId, address receiver, uint96 feeNumerator);
-
-    error AssetAlreadyRegistered(string nid);
-    error NotTokenHolder(uint256 tokenId);
-    error TokenNotFound(uint256 tokenId);
-    error NidNotRegistered(string nid);
-    error InvalidRecipient();
-    error InvalidNid();
-    error InvalidRoyaltyReceiver();
-    error RoyaltyFeeTooHigh(uint96 feeNumerator);
 
     constructor(address admin) ERC721("W Custody", "WCUSTODY") {
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
