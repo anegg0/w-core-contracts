@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-/// @title IWCustodyNFT
-/// @notice Interface for the W Custody NFT contract.
-interface IWCustodyNFT {
+/// @title IIRLCustodyNFT
+/// @notice Interface for the IRL Custody NFT contract.
+interface IIRLCustodyNFT {
     event AssetMinted(uint256 indexed tokenId, string nid, string assetTreeCid, address indexed to);
     event RoyaltyUpdated(uint256 indexed tokenId, address receiver, uint96 feeNumerator);
 

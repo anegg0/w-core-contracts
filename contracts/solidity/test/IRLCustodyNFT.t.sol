@@ -2,11 +2,11 @@
 pragma solidity ^0.8.28;
 
 import {Test} from "forge-std/Test.sol";
-import {WCustodyNFT} from "../src/WCustodyNFT.sol";
-import {IWCustodyNFT} from "@interfaces/IWCustodyNFT.sol";
+import {IRLCustodyNFT} from "../src/IRLCustodyNFT.sol";
+import {IIRLCustodyNFT} from "@interfaces/IIRLCustodyNFT.sol";
 
-contract WCustodyNFTTest is Test {
-    WCustodyNFT public nft;
+contract IRLCustodyNFTTest is Test {
+    IRLCustodyNFT public nft;
     address public admin = address(1);
     address public minter = address(2);
     address public creator = address(3);
@@ -17,7 +17,7 @@ contract WCustodyNFTTest is Test {
 
     function setUp() public {
         vm.startPrank(admin);
-        nft = new WCustodyNFT(admin);
+        nft = new IRLCustodyNFT(admin);
         nft.grantRole(nft.MINTER_ROLE(), minter);
         vm.stopPrank();
     }
@@ -47,7 +47,7 @@ contract WCustodyNFTTest is Test {
         uint256 expected = uint256(keccak256(abi.encodePacked(NID)));
         vm.prank(minter);
         vm.expectEmit(true, true, false, true);
-        emit IWCustodyNFT.AssetMinted(expected, NID, ASSET_TREE_CID, creator);
+        emit IIRLCustodyNFT.AssetMinted(expected, NID, ASSET_TREE_CID, creator);
         nft.mint(creator, NID, ASSET_TREE_CID, creator, 1000);
     }
 
@@ -90,7 +90,7 @@ contract WCustodyNFTTest is Test {
         uint256 tokenId = nft.mint(creator, NID, ASSET_TREE_CID, creator, 1000);
         vm.prank(creator);
         vm.expectEmit(true, false, false, true);
-        emit IWCustodyNFT.RoyaltyUpdated(tokenId, other, 500);
+        emit IIRLCustodyNFT.RoyaltyUpdated(tokenId, other, 500);
         nft.updateRoyalty(tokenId, other, 500);
     }
 
@@ -106,25 +106,25 @@ contract WCustodyNFTTest is Test {
         vm.prank(minter);
         nft.mint(creator, NID, ASSET_TREE_CID, creator, 1000);
         vm.prank(minter);
-        vm.expectRevert(abi.encodeWithSelector(IWCustodyNFT.AssetAlreadyRegistered.selector, NID));
+        vm.expectRevert(abi.encodeWithSelector(IIRLCustodyNFT.AssetAlreadyRegistered.selector, NID));
         nft.mint(creator, NID, ASSET_TREE_CID, creator, 1000);
     }
 
     function test_mint_reverts_zero_address() public {
         vm.prank(minter);
-        vm.expectRevert(IWCustodyNFT.InvalidRecipient.selector);
+        vm.expectRevert(IIRLCustodyNFT.InvalidRecipient.selector);
         nft.mint(address(0), NID, ASSET_TREE_CID, creator, 1000);
     }
 
     function test_mint_reverts_empty_nid() public {
         vm.prank(minter);
-        vm.expectRevert(IWCustodyNFT.InvalidNid.selector);
+        vm.expectRevert(IIRLCustodyNFT.InvalidNid.selector);
         nft.mint(creator, "", ASSET_TREE_CID, creator, 1000);
     }
 
     function test_mint_reverts_royalty_too_high() public {
         vm.prank(minter);
-        vm.expectRevert(abi.encodeWithSelector(IWCustodyNFT.RoyaltyFeeTooHigh.selector, uint96(10_001)));
+        vm.expectRevert(abi.encodeWithSelector(IIRLCustodyNFT.RoyaltyFeeTooHigh.selector, uint96(10_001)));
         nft.mint(creator, NID, ASSET_TREE_CID, creator, 10_001);
     }
 
@@ -132,7 +132,7 @@ contract WCustodyNFTTest is Test {
         vm.prank(minter);
         uint256 tokenId = nft.mint(creator, NID, ASSET_TREE_CID, creator, 1000);
         vm.prank(other);
-        vm.expectRevert(abi.encodeWithSelector(IWCustodyNFT.NotTokenHolder.selector, tokenId));
+        vm.expectRevert(abi.encodeWithSelector(IIRLCustodyNFT.NotTokenHolder.selector, tokenId));
         nft.updateRoyalty(tokenId, other, 500);
     }
 
@@ -140,7 +140,7 @@ contract WCustodyNFTTest is Test {
         vm.prank(minter);
         uint256 tokenId = nft.mint(creator, NID, ASSET_TREE_CID, creator, 1000);
         vm.prank(creator);
-        vm.expectRevert(abi.encodeWithSelector(IWCustodyNFT.RoyaltyFeeTooHigh.selector, uint96(10_001)));
+        vm.expectRevert(abi.encodeWithSelector(IIRLCustodyNFT.RoyaltyFeeTooHigh.selector, uint96(10_001)));
         nft.updateRoyalty(tokenId, creator, 10_001);
     }
 
@@ -148,17 +148,17 @@ contract WCustodyNFTTest is Test {
         vm.prank(minter);
         uint256 tokenId = nft.mint(creator, NID, ASSET_TREE_CID, creator, 1000);
         vm.prank(creator);
-        vm.expectRevert(IWCustodyNFT.InvalidRoyaltyReceiver.selector);
+        vm.expectRevert(IIRLCustodyNFT.InvalidRoyaltyReceiver.selector);
         nft.updateRoyalty(tokenId, address(0), 500);
     }
 
     function test_nidOf_reverts_nonexistent_token() public {
-        vm.expectRevert(abi.encodeWithSelector(IWCustodyNFT.TokenNotFound.selector, uint256(999)));
+        vm.expectRevert(abi.encodeWithSelector(IIRLCustodyNFT.TokenNotFound.selector, uint256(999)));
         nft.nidOf(999);
     }
 
     function test_tokenIdOf_reverts_unregistered_nid() public {
-        vm.expectRevert(abi.encodeWithSelector(IWCustodyNFT.NidNotRegistered.selector, "bafyunknown"));
+        vm.expectRevert(abi.encodeWithSelector(IIRLCustodyNFT.NidNotRegistered.selector, "bafyunknown"));
         nft.tokenIdOf("bafyunknown");
     }
 

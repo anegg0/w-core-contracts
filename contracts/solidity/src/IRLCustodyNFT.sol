@@ -5,18 +5,18 @@ import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import {ERC721URIStorage} from "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import {ERC2981} from "@openzeppelin/contracts/token/common/ERC2981.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
-import {IWCustodyNFT} from "@interfaces/IWCustodyNFT.sol";
+import {IIRLCustodyNFT} from "@interfaces/IIRLCustodyNFT.sol";
 
-/// @title WCustodyNFT
-/// @notice ERC-721 representing exclusive ownership of a media asset captured with Camera Signature.
+/// @title IRLCustodyNFT
+/// @notice ERC-721 representing exclusive ownership of a media asset captured with Capture Protocol.
 /// @dev One NFT per asset. Token ID = uint256(keccak256(nid)). URI is immutable after mint.
-contract WCustodyNFT is ERC721, ERC721URIStorage, ERC2981, AccessControl, IWCustodyNFT {
+contract IRLCustodyNFT is ERC721, ERC721URIStorage, ERC2981, AccessControl, IIRLCustodyNFT {
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
 
     mapping(uint256 tokenId => string nid) private _tokenNids;
     mapping(bytes32 nidHash => bool registered) private _registeredNids;
 
-    constructor(address admin) ERC721("W Custody", "WCUSTODY") {
+    constructor(address admin) ERC721("IRL Custody", "IRL") {
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
     }
 
