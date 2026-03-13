@@ -31,6 +31,7 @@ w-code/
 │   │   ├── script/
 │   │   │   └── DeployWCustodyNFT.s.sol
 │   │   ├── lib/                     # forge install deps (forge-std, openzeppelin)
+│   │   ├── interfaces -> ../interfaces     # symlink to shared interfaces
 │   │   ├── foundry.toml
 │   │   └── .gitignore               # cache/, out/
 │   │
@@ -38,6 +39,7 @@ w-code/
 │   │   ├── Cargo.toml               # [workspace] members = ["vcp-verifier", ...]
 │   │   ├── vcp-verifier/
 │   │   │   ├── Cargo.toml
+│   │   │   ├── build.rs             # generates ABI JSON from Solidity artifacts
 │   │   │   └── src/
 │   │   │       └── lib.rs
 │   │   └── <future-crate>/
@@ -45,8 +47,7 @@ w-code/
 │   │       └── src/
 │   │
 │   ├── interfaces/                  # Shared Solidity interfaces
-│   │   ├── IWCustodyNFT.sol         # Interface extracted from WCustodyNFT
-│   │   └── IVCPVerifier.sol         # Verifier interface (Solidity canonical)
+│   │   └── IWCustodyNFT.sol         # Interface extracted from WCustodyNFT
 │   │
 │   └── integration/                 # Cross-language integration tests
 │       ├── Cargo.toml               # Rust test harness
@@ -63,45 +64,59 @@ w-code/
 
 ### Foundry (contracts/solidity/)
 
-`foundry.toml` adds a remapping so Solidity sources can import shared interfaces:
+A symlink `contracts/solidity/interfaces -> ../interfaces` lets Foundry resolve shared interfaces as a local path within the project root, avoiding `../` remapping issues.
+
+Full `foundry.toml`:
 
 ```toml
+[profile.default]
+src = "src"
+out = "out"
+libs = ["lib"]
+solc = "0.8.28"
+
 remappings = [
-    "@interfaces/=../interfaces/",
-    "@openzeppelin/=lib/openzeppelin-contracts/"
+    "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
+    "@interfaces/=interfaces/",
 ]
 ```
 
-WCustodyNFT implements `IWCustodyNFT`. ABI JSON output from `forge build` lands in `out/` as usual.
+WCustodyNFT imports `@interfaces/IWCustodyNFT.sol` and implements it. ABI JSON output from `forge build` lands in `out/` as usual.
 
 ### Stylus (contracts/stylus/)
 
-Each crate depends on `stylus-sdk` and `alloy-sol-types`. Crates consume interfaces via the `sol!` macro pointed at the shared interface files:
+Each crate depends on `stylus-sdk` and `alloy-sol-types`. Crates consume interfaces via JSON ABI (not raw `.sol` files, since `sol!` only parses a Solidity subset and rejects pragmas/imports).
+
+The recommended approach: each Stylus crate has a `build.rs` that reads the ABI JSON from `solidity/out/` (avoiding a `forge` dependency on the Rust build path) and copies it into the crate's local `abi/` directory. The `sol!` macro then consumes the JSON ABI:
 
 ```rust
-sol!("../../interfaces/IWCustodyNFT.sol");
+sol!(IWCustodyNFT, "abi/IWCustodyNFT.json");
 ```
 
-This generates Rust bindings at compile time from the canonical Solidity interface — no manual ABI copying.
+This requires running `forge build` in `contracts/solidity/` before building Stylus crates. This is more robust than pointing `sol!` at `.sol` files and avoids parser limitations.
 
 ### Interface Flow
 
 ```
-interfaces/IWCustodyNFT.sol
-    ├── imported by solidity/src/WCustodyNFT.sol  (implements it)
-    └── consumed by stylus/vcp-verifier/src/lib.rs (calls it via sol! bindings)
+interfaces/IWCustodyNFT.sol  (canonical source of truth)
+    │
+    ├── symlinked into solidity/interfaces/
+    │   └── imported by solidity/src/WCustodyNFT.sol  (implements it)
+    │
+    └── ABI extracted via forge inspect or solidity/out/
+        └── consumed by stylus/vcp-verifier/ via sol! JSON binding
 ```
-
-Single source of truth for cross-contract ABIs.
 
 ### Integration Tests (contracts/integration/)
 
 A standalone Rust crate (not part of the Stylus workspace) that:
 
-1. Spins up a local Stylus-compatible devnet (nitro-testnode or anvil)
+1. Requires a running nitro-testnode (Stylus WASM execution needs a Nitro-compatible devnet; anvil does not support Stylus)
 2. Deploys compiled Solidity artifacts (reads ABI/bytecode from `solidity/out/`)
 3. Deploys Stylus WASM contracts
 4. Tests the full mint flow: VCP Verifier validates attestation → calls WCustodyNFT.mint()
+
+Setup requirement: Docker must be running with `nitro-testnode --init`. For Solidity-only tests, `forge test` in `contracts/solidity/` remains the faster path.
 
 ## Build Commands
 
@@ -118,9 +133,9 @@ cargo stylus check          # Validate WASM compatibility
 cargo build --release       # Build all workspace crates
 cargo test                  # Unit tests
 
-# Integration
+# Integration (requires nitro-testnode running)
 cd contracts/integration
-cargo test                  # Requires local devnet running
+cargo test
 
 # Single test examples
 cd contracts/solidity && forge test --match-test test_mint_sets_owner -vv
@@ -131,13 +146,16 @@ cd contracts/integration && cargo test vcp_mint_flow -- --nocapture
 
 One-time migration from the current flat `contracts/` structure:
 
+0. Delete `contracts/out/`, `contracts/cache/`, and `contracts/rust/` (empty placeholder). Remove any tracked build artifacts from git.
 1. Move `contracts/{src,test,script,lib,foundry.toml,.gitignore}` → `contracts/solidity/`
-2. Create empty `contracts/stylus/Cargo.toml` (workspace scaffold)
-3. Create `contracts/interfaces/` and extract `IWCustodyNFT.sol` from `WCustodyNFT.sol`
-4. Create empty `contracts/integration/` scaffold
-5. Update `foundry.toml` remappings for the new `interfaces/` path
+2. Move `contracts/README.md` → `contracts/solidity/README.md` (Foundry-specific content)
+3. Create `contracts/interfaces/` and extract `IWCustodyNFT.sol` interface from `WCustodyNFT.sol`
+4. Create symlink: `contracts/solidity/interfaces -> ../interfaces`
+5. Update `foundry.toml` with full config (see Build System section above)
 6. Verify `forge build && forge test` pass from `contracts/solidity/`
 7. Update `CLAUDE.md` and `README.md` with new paths and commands
+
+The `contracts/stylus/` and `contracts/integration/` directories will be created when VCP Verifier development begins. The directory tree above shows the target architecture.
 
 No Stylus code exists yet, so the Cargo workspace and integration crate start as minimal scaffolds.
 
@@ -148,3 +166,4 @@ No Stylus code exists yet, so the Cargo workspace and integration crate start as
 - Stylus contracts target Arbitrum L3
 - Token ID scheme (`uint256(keccak256(nid))`) and immutable token URIs are unchanged
 - VCP Verifier will hold `MINTER_ROLE` on WCustodyNFT
+- Dependencies are committed directly (no git submodules), so no `.gitmodules` update needed
