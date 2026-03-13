@@ -1,4 +1,4 @@
-# W
+# IRL
 
 Verifiable photo provenance on Arbitrum. Capture Protocol (CP) provides strong evidence a real camera took a real photo, recorded on-chain with IPFS storage and C2PA metadata.
 
@@ -17,7 +17,7 @@ Early development. First contract implemented, CP Verifier not yet built.
 
 ## Contracts
 
-### WCustodyNFT
+### IRLCustodyNFT
 
 ERC-721 ownership token for registered media assets.
 
