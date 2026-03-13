@@ -7,7 +7,7 @@ import {ERC2981} from "@openzeppelin/contracts/token/common/ERC2981.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 
 /// @title WCustodyNFT
-/// @notice ERC-721 representing exclusive ownership of a media asset captured with Camera Flash Signature.
+/// @notice ERC-721 representing exclusive ownership of a media asset captured with Camera Signature.
 /// @dev One NFT per asset. Token ID = uint256(keccak256(nid)). URI is immutable after mint.
 contract WCustodyNFT is ERC721, ERC721URIStorage, ERC2981, AccessControl {
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");

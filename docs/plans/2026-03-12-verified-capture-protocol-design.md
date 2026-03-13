@@ -1,4 +1,4 @@
-# Verified Capture Protocol (VCP) — Design Document
+# Verified Capture Protocol (IRL) — Design Document
 
 **Date:** 2026-03-12
 **Status:** Approved
@@ -6,7 +6,7 @@
 
 ## 1. Purpose
 
-VCP is a composite attestation protocol that provides strong evidence that a photo was captured directly from a physical camera on a verified, uncompromised device with no software tampering. It replaces the earlier CFS concept, which implied a single cryptographic trick. VCP is honest about what it is: layered evidence, not mathematical proof.
+IRL is a composite attestation protocol that provides strong evidence that a photo was captured directly from a physical camera on a verified, uncompromised device with no software tampering. It replaces the earlier CFS concept, which implied a single cryptographic trick. IRL is honest about what it is: layered evidence, not mathematical proof.
 
 ## 2. Threat Model
 
@@ -14,14 +14,14 @@ VCP is a composite attestation protocol that provides strong evidence that a pho
 
 Modified apps, virtual cameras, Xposed/Frida hooks, basic jailbreaks. Willing to invest moderate effort and technical skill.
 
-### What VCP guarantees
+### What IRL guarantees
 
 - The image bytes were produced by a physical camera sensor on an uncompromised, allowlisted device
 - The image was not modified between ISP output and signing
 - The capture timestamp is hardware-attested
 - A recapture risk score is permanently attached (for original-scene mode)
 
-### What VCP does NOT guarantee
+### What IRL does NOT guarantee
 
 - That the scene itself is "real" (someone could photograph a high-quality physical diorama)
 - Resistance to sophisticated jailbreaks that bypass App Attest (mitigated by allowlist + attestation layering)
@@ -30,7 +30,7 @@ Modified apps, virtual cameras, Xposed/Frida hooks, basic jailbreaks. Willing to
 
 ### Honest marketing language
 
-"VCP provides strong evidence that a photo was captured directly from a physical camera on a verified device, with no software tampering. It dramatically raises the cost and difficulty of forgery, but no software system on consumer hardware can provide absolute guarantees."
+"IRL provides strong evidence that a photo was captured directly from a physical camera on a verified device, with no software tampering. It dramatically raises the cost and difficulty of forgery, but no software system on consumer hardware can provide absolute guarantees."
 
 ### Trust boundaries
 
@@ -67,8 +67,8 @@ iOS ships first because:
 
 | Tier | Devices | Capabilities |
 |---|---|---|
-| **Full VCP** | iPhone 12 Pro, 13 Pro, 14 Pro, 15 Pro, 16 Pro (+ Pro Max) | LiDAR + Secure Enclave + modern ISP. Strongest depth analysis |
-| **VCP without depth** | iPhone 12, 13, 14, 15, 16 (non-Pro) | No LiDAR. Recapture detection relies on moire, flicker, IMU parallax, texture |
+| **Full IRL** | iPhone 12 Pro, 13 Pro, 14 Pro, 15 Pro, 16 Pro (+ Pro Max) | LiDAR + Secure Enclave + modern ISP. Strongest depth analysis |
+| **IRL without depth** | iPhone 12, 13, 14, 15, 16 (non-Pro) | No LiDAR. Recapture detection relies on moire, flicker, IMU parallax, texture |
 | **Not supported** | iPhone 11 and older | App Attest inconsistent, camera hardware too varied |
 
 Minimum requirements: Secure Enclave with App Attest, iOS 16+, A12 chip or later.
@@ -129,7 +129,7 @@ User taps shutter
 +--------------------+-----------------------------------+
                      |
                      v
-+-- VCP Bundle Assembly ---------------------------------+
++-- IRL Bundle Assembly ---------------------------------+
 |  image_hash:       SHA-256 of image bytes              |
 |  timestamp:        Secure Enclave attested time        |
 |  device_model:     from attestation cert chain         |
@@ -141,13 +141,13 @@ User taps shutter
                      |
                      v
 +-- Secure Enclave --------------------------------------+
-|  Sign VCP bundle with App Attest key                   |
+|  Sign IRL bundle with App Attest key                   |
 |  Certificate chain -> Apple CA root                    |
 +--------------------+-----------------------------------+
-                     | signed VCP bundle + image
+                     | signed IRL bundle + image
                      v
 +-- Local Storage (encrypted) ---------------------------+
-|  C2PA manifest assembled with VCP as assertion         |
+|  C2PA manifest assembled with IRL as assertion         |
 |  Image + manifest saved to app sandbox                 |
 +--------------------+-----------------------------------+
                      | when connectivity available
@@ -168,9 +168,9 @@ Rationale: W's value proposition is "this is what the camera saw." Allowing edit
 ### Offline behavior
 
 - Capture, sign, and store all work offline
-- C2PA manifest is complete with VCP signature
+- C2PA manifest is complete with IRL signature
 - Upload queue persists until connectivity returns
-- On-chain anchor timestamp reflects "anchored at" not "captured at" (capture time is in the VCP bundle)
+- On-chain anchor timestamp reflects "anchored at" not "captured at" (capture time is in the IRL bundle)
 
 ## 5. Capture Modes & Trust Tiers
 
@@ -242,7 +242,7 @@ Each detector returns [0,1]. Weights are tuned per device model (different camer
 
 ## 7. C2PA Integration
 
-VCP embeds as a custom C2PA assertion. Any C2PA-aware tool (Adobe Content Credentials, Truepic, newsroom verification tools) can read the provenance.
+IRL embeds as a custom C2PA assertion. Any C2PA-aware tool (Adobe Content Credentials, Truepic, newsroom verification tools) can read the provenance.
 
 ### C2PA manifest structure
 
@@ -306,9 +306,9 @@ VCP embeds as a custom C2PA assertion. Any C2PA-aware tool (Adobe Content Creden
 
 The contract is agnostic to AssetTree content. It stores the IPFS CID of the AssetTree. Trust tier lives in the AssetTree JSON, not on-chain.
 
-### VCP Verifier (replaces CFS Verifier)
+### IRL Verifier (replaces CFS Verifier)
 
-Rust/Stylus contract that holds MINTER_ROLE on WCustodyNFT. Verifies VCP attestation on-chain before authorizing mint.
+Rust/Stylus contract that holds MINTER_ROLE on WCustodyNFT. Verifies IRL attestation on-chain before authorizing mint.
 
 On-chain verification scope:
 
@@ -329,15 +329,15 @@ The on-chain verifier confirms: "a valid attested device signed this bundle, and
 | Component | Description |
 |---|---|
 | W Camera app (iOS) | AVCaptureSession-based, minimal ISP processing, two capture modes |
-| VCP bundle assembly | Composite attestation: image hash, timestamp, device attestation, IMU, recapture score |
+| IRL bundle assembly | Composite attestation: image hash, timestamp, device attestation, IMU, recapture score |
 | Secure Enclave signing | App Attest key, per-capture assertion, Apple CA chain |
 | Recapture detection | On-device ML ensemble (moire, flicker, subpixel, texture, depth, IMU parallax) |
 | Device allowlist | Server-side, iPhone 12+ (two tiers: full / no-lidar) |
-| C2PA manifest | VCP as custom assertion, standard c2pa.created action |
+| C2PA manifest | IRL as custom assertion, standard c2pa.created action |
 | Local storage | Encrypted app sandbox, offline capture queue |
 | Deferred anchor | IPFS pin + Arbitrum L3 commit + WCustodyNFT mint when online |
 | Trust tiers | Four tiers in AssetTree, immutable once minted |
-| VCP Verifier (Stylus) | On-chain certificate chain + hash + threshold verification, holds MINTER_ROLE |
+| IRL Verifier (Stylus) | On-chain certificate chain + hash + threshold verification, holds MINTER_ROLE |
 
 ### v1.1 (defined, not implemented)
 
@@ -363,4 +363,4 @@ The on-chain verifier confirms: "a valid attested device signed this bundle, and
 1. **Apple could change App Attest behavior.** Mitigation: abstract the attestation interface so implementations are swappable.
 2. **Recapture ML models need training data.** A dataset of screen-captures and print-captures alongside genuine photos must be collected before detection is reliable.
 3. **Stylus/Rust on Arbitrum is maturing.** Mitigation: can deploy a temporary Solidity verifier that checks fewer fields.
-4. **C2PA tooling on iOS is early.** The c2pa-rs Rust library exists but iOS bindings need work. Mitigation: embed VCP data in EXIF as a fallback, migrate to proper C2PA when tooling matures.
+4. **C2PA tooling on iOS is early.** The c2pa-rs Rust library exists but iOS bindings need work. Mitigation: embed IRL data in EXIF as a fallback, migrate to proper C2PA when tooling matures.
