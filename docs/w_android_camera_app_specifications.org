@@ -1,0 +1,83 @@
+:PROPERTIES:
+:ID:       45c62d81-87e5-41b9-9624-00e7ffafcc94
+:END:
+#+TITLE: Android Camera App Specifications
+#+FILETAGS: :b:W:
+#+AUTHOR: Gael Blanchemain
+#+LANGUAGE: en
+#+OPTIONS: H:3 num:t toc:2 \n:nil
+
+* Overview
+
+- Name: W
+- Version: 1.0.0
+- Platforms: Android 10+
+
+* Hardware Requirements
+
+- Resolution: [Insert maximum camera resolution, e.g., 1080p, 4K]
+- Focal Length: [Insert maximum focal length, e.g., 24mm, 70mm]
+- Lens Type: [Insert type of lens used, e.g., optical, digital, hybrid]
+
+* Software Requirements
+
+- Operating System: Android
+- Camera Software: [List camera software or SDK used, e.g., Google Camera, OnePlus Camera App]
+- Algorithm: [Insert name of algorithm used for image processing and filtering]
+
+* Camera Modes
+
+| Mode       | Description                                                                     |
+|------------+---------------------------------------------------------------------------------|
+| Photo      | Standard photo mode with flash and HDR support                                  |
+| Burst Mode | Continuous burst mode for capturing multiple photos in quick succession         |
+| Live-View  | Real-time preview of the camera feed with options to switch between camera modes|
+
+* Image Processing and Filtering
+
+- White Balance: Automatic, Daylight, Shade, Tungsten, Fluorescent, Cloudy
+- Exposure Compensation: +/−3EV in steps of 0.5EV
+- HDR: On/Off
+- Flash: On/Off with options to toggle flash type (e.g., rear, front)
+- Image Stabilization: On/Off
+
+* Additional Features
+
+- Self-Timer: [Insert timer duration, e.g., 3 seconds, 10 seconds]
+- Geotagging: On/Off with options to toggle geotag format (e.g., GPS, altitude)
+
+* Error Handling and Recovery
+
+| Error                    | Description                                                        |
+|-------------------------+-------------------------------------------------------------------|
+| Camera Not Found         | Error message when camera device is not available                  |
+| Insufficient Storage Space| Error message when storage space is insufficient for video recording|
+| Out of Memory            | Error message when memory runs out during image or video processing|
+
+* Performance and Battery Life
+
+- Camera App Launch Time: [Insert launch time, e.g., less than 1 second]
+- Video Recording Time: [Insert estimated video recording time, e.g., 5 minutes]
+
+* Security Features
+
+| Feature                    | Description                                                      |
+|---------------------------+------------------------------------------------------------------|
+| Face Recognition           | On/Off with options to toggle face recognition accuracy (e.g., high, low) |
+| Fingerprint Authentication | On/Off with options to toggle fingerprint authentication type (e.g., single touch, multi-touch) |
+
+* Conclusion
+
+This camera app provides the following key features:
+
+- [List main camera modes]
+- [Insert hardware requirements for resolution and focal length]
+- [Describe software requirements for operating system and camera software]
+
+* References
+
+1. *Android Developers Documentation* - Camera API. (n.d.). Retrieved from https://developer.android.com/reference/android/hardware/Camera
+
+2. *Google Camera App Source Code* - Open-Source Android Camera App. (n.d.). Retrieved from https://github.com/google/camera-app
+
+3. *OnePlus Camera App Source Code* - Open-Source Android Camera App. (n.d.). Retrieved from https://github.com/oneplus/omnicam

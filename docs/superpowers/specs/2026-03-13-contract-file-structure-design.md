@@ -6,7 +6,7 @@
 
 ## Context
 
-W's smart contract layer currently lives in `contracts/` as a single Foundry project containing WCustodyNFT (Solidity). The upcoming CP Verifier and 1-2 additional contracts will be written in Rust targeting Arbitrum Stylus. These Stylus contracts call Solidity contracts directly (e.g., CP Verifier holds `MINTER_ROLE` and calls `WCustodyNFT.mint()`), so the two build systems need shared ABI artifacts at build time.
+W's smart contract layer currently lives in `contracts/` as a single Foundry project containing IRLCustodyNFT (Solidity). The upcoming CP Verifier and 1-2 additional contracts will be written in Rust targeting Arbitrum Stylus. These Stylus contracts call Solidity contracts directly (e.g., CP Verifier holds `MINTER_ROLE` and calls `IRLCustodyNFT.mint()`), so the two build systems need shared ABI artifacts at build time.
 
 ## Design Decision
 
@@ -25,11 +25,11 @@ w-code/
 ├── contracts/
 │   ├── solidity/                    # Foundry project
 │   │   ├── src/
-│   │   │   └── WCustodyNFT.sol
+│   │   │   └── IRLCustodyNFT.sol
 │   │   ├── test/
-│   │   │   └── WCustodyNFT.t.sol
+│   │   │   └── IRLCustodyNFT.t.sol
 │   │   ├── script/
-│   │   │   └── DeployWCustodyNFT.s.sol
+│   │   │   └── DeployIRLCustodyNFT.s.sol
 │   │   ├── lib/                     # forge install deps (forge-std, openzeppelin)
 │   │   ├── interfaces -> ../interfaces     # symlink to shared interfaces
 │   │   ├── foundry.toml
@@ -47,7 +47,7 @@ w-code/
 │   │       └── src/
 │   │
 │   ├── interfaces/                  # Shared Solidity interfaces
-│   │   └── IWCustodyNFT.sol         # Interface extracted from WCustodyNFT
+│   │   └── IIRLCustodyNFT.sol         # Interface extracted from IRLCustodyNFT
 │   │
 │   └── integration/                 # Cross-language integration tests
 │       ├── Cargo.toml               # Rust test harness
@@ -81,7 +81,7 @@ remappings = [
 ]
 ```
 
-WCustodyNFT imports `@interfaces/IWCustodyNFT.sol` and implements it. ABI JSON output from `forge build` lands in `out/` as usual.
+IRLCustodyNFT imports `@interfaces/IIRLCustodyNFT.sol` and implements it. ABI JSON output from `forge build` lands in `out/` as usual.
 
 ### Stylus (contracts/stylus/)
 
@@ -91,7 +91,7 @@ Each crate depends on `stylus-sdk` (v0.8.4+), `alloy-primitives`, and `alloy-sol
 use stylus_sdk::prelude::*;
 
 sol_interface! {
-    interface IWCustodyNFT {
+    interface IIRLCustodyNFT {
         function mint(address to, string calldata nid, string calldata assetTreeCid,
                       address royaltyReceiver, uint96 royaltyFee) external returns (uint256);
         function ownerOf(uint256 tokenId) external view returns (address);
@@ -100,7 +100,7 @@ sol_interface! {
 }
 ```
 
-This generates type-safe Rust bindings at compile time. No `build.rs`, no ABI JSON files, no dependency on `forge build` output. The `interfaces/IWCustodyNFT.sol` file remains the human-readable canonical reference, and the `sol_interface!` declaration must be kept in sync with it manually (enforced by integration tests).
+This generates type-safe Rust bindings at compile time. No `build.rs`, no ABI JSON files, no dependency on `forge build` output. The `interfaces/IIRLCustodyNFT.sol` file remains the human-readable canonical reference, and the `sol_interface!` declaration must be kept in sync with it manually (enforced by integration tests).
 
 Cross-contract calls use explicit call constructors:
 - `Call::new()` for view/pure calls (`&self`)
@@ -111,10 +111,10 @@ Stylus contracts export their own ABI as a Solidity interface via `cargo stylus 
 ### Interface Flow
 
 ```
-interfaces/IWCustodyNFT.sol  (canonical source of truth for humans)
+interfaces/IIRLCustodyNFT.sol  (canonical source of truth for humans)
     │
     ├── symlinked into solidity/interfaces/
-    │   └── imported by solidity/src/WCustodyNFT.sol  (implements it)
+    │   └── imported by solidity/src/IRLCustodyNFT.sol  (implements it)
     │
     └── mirrored as sol_interface! declaration in Rust
         └── used by stylus/vcp-verifier/src/lib.rs (calls it)
@@ -129,7 +129,7 @@ A standalone Rust crate (not part of the Stylus workspace) that:
 1. Requires a running nitro-testnode (Stylus WASM execution needs a Nitro-compatible devnet; anvil does not support Stylus)
 2. Deploys compiled Solidity artifacts (reads ABI/bytecode from `solidity/out/`)
 3. Deploys Stylus WASM contracts
-4. Tests the full mint flow: CP Verifier validates attestation → calls WCustodyNFT.mint()
+4. Tests the full mint flow: CP Verifier validates attestation → calls IRLCustodyNFT.mint()
 
 Setup requirement: Docker must be running with `nitro-testnode --init`. For Solidity-only tests, `forge test` in `contracts/solidity/` remains the faster path.
 
@@ -164,7 +164,7 @@ One-time migration from the current flat `contracts/` structure:
 0. Delete `contracts/out/`, `contracts/cache/`, and `contracts/rust/` (empty placeholder). Remove any tracked build artifacts from git.
 1. Move `contracts/{src,test,script,lib,foundry.toml,.gitignore}` → `contracts/solidity/`
 2. Move `contracts/README.md` → `contracts/solidity/README.md` (Foundry-specific content)
-3. Create `contracts/interfaces/` and extract `IWCustodyNFT.sol` interface from `WCustodyNFT.sol`
+3. Create `contracts/interfaces/` and extract `IIRLCustodyNFT.sol` interface from `IRLCustodyNFT.sol`
 4. Create symlink: `contracts/solidity/interfaces -> ../interfaces`
 5. Update `foundry.toml` with full config (see Build System section above)
 6. Verify `forge build && forge test` pass from `contracts/solidity/`
@@ -180,5 +180,5 @@ No Stylus code exists yet, so the Cargo workspace and integration crate start as
 - OpenZeppelin v5.6.1 (ERC-721, ERC-2981, AccessControl)
 - Stylus contracts target Arbitrum L3
 - Token ID scheme (`uint256(keccak256(nid))`) and immutable token URIs are unchanged
-- CP Verifier will hold `MINTER_ROLE` on WCustodyNFT
+- CP Verifier will hold `MINTER_ROLE` on IRLCustodyNFT
 - Dependencies are committed directly (no git submodules), so no `.gitmodules` update needed

@@ -1,4 +1,4 @@
-# W Custody NFT Contract — Design Spec
+# IRL Custody NFT Contract — Design Spec
 
 ## Summary
 
@@ -148,11 +148,11 @@ event RoyaltyUpdated(uint256 indexed tokenId, address receiver, uint96 feeNumera
 ```
 contracts/
   src/
-    WCustodyNFT.sol          # Main contract
+    IRLCustodyNFT.sol          # Main contract
   test/
-    WCustodyNFT.t.sol        # Foundry tests
+    IRLCustodyNFT.t.sol        # Foundry tests
   script/
-    DeployWCustodyNFT.s.sol  # Deployment script
+    DeployIRLCustodyNFT.s.sol  # Deployment script
   foundry.toml               # Foundry config
 ```
 

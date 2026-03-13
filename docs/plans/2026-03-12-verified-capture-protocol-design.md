@@ -155,7 +155,7 @@ User taps shutter
 +-- Deferred Anchor -------------------------------------+
 |  1. Pin image + AssetTree to IPFS -> get CID           |
 |  2. Submit on-chain commit (Arbitrum L3)               |
-|  3. Mint WCustodyNFT with trust tier                   |
+|  3. Mint IRLCustodyNFT with trust tier                   |
 +--------------------------------------------------------+
 ```
 
@@ -302,13 +302,13 @@ IRL embeds as a custom C2PA assertion. Any C2PA-aware tool (Adobe Content Creden
 
 ## 8. Smart Contract Impact
 
-### WCustodyNFT — no changes needed
+### IRLCustodyNFT — no changes needed
 
 The contract is agnostic to AssetTree content. It stores the IPFS CID of the AssetTree. Trust tier lives in the AssetTree JSON, not on-chain.
 
 ### IRL Verifier (replaces CFS Verifier)
 
-Rust/Stylus contract that holds MINTER_ROLE on WCustodyNFT. Verifies IRL attestation on-chain before authorizing mint.
+Rust/Stylus contract that holds MINTER_ROLE on IRLCustodyNFT. Verifies IRL attestation on-chain before authorizing mint.
 
 On-chain verification scope:
 
@@ -335,7 +335,7 @@ The on-chain verifier confirms: "a valid attested device signed this bundle, and
 | Device allowlist | Server-side, iPhone 12+ (two tiers: full / no-lidar) |
 | C2PA manifest | IRL as custom assertion, standard c2pa.created action |
 | Local storage | Encrypted app sandbox, offline capture queue |
-| Deferred anchor | IPFS pin + Arbitrum L3 commit + WCustodyNFT mint when online |
+| Deferred anchor | IPFS pin + Arbitrum L3 commit + IRLCustodyNFT mint when online |
 | Trust tiers | Four tiers in AssetTree, immutable once minted |
 | IRL Verifier (Stylus) | On-chain certificate chain + hash + threshold verification, holds MINTER_ROLE |
 

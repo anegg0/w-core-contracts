@@ -1,8 +1,8 @@
-# W Custody NFT Implementation Plan
+# IRL Custody NFT Implementation Plan
 
 > **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Implement the WCustodyNFT ERC-721 contract with deterministic token IDs, immutable URI, EIP-2981 royalties, and role-based minting.
+**Goal:** Implement the IRLCustodyNFT ERC-721 contract with deterministic token IDs, immutable URI, EIP-2981 royalties, and role-based minting.
 
 **Architecture:** Single Solidity contract inheriting OpenZeppelin ERC721URIStorage, ERC2981, and AccessControl. Token IDs derived from keccak256 of IPFS CID. Minting gated by MINTER_ROLE. Foundry for build/test/deploy.
 
@@ -15,11 +15,11 @@
 ```
 contracts/
   src/
-    WCustodyNFT.sol          # Main contract
+    IRLCustodyNFT.sol          # Main contract
   test/
-    WCustodyNFT.t.sol        # Foundry tests
+    IRLCustodyNFT.t.sol        # Foundry tests
   script/
-    DeployWCustodyNFT.s.sol  # Deployment script
+    DeployIRLCustodyNFT.s.sol  # Deployment script
   foundry.toml               # Foundry config
 ```
 
@@ -96,7 +96,7 @@ git commit -m "Initialize Foundry project with OpenZeppelin v5.6.1"
 ### Task 2: Write failing test — mint and token ID derivation
 
 **Files:**
-- Create: `contracts/test/WCustodyNFT.t.sol`
+- Create: `contracts/test/IRLCustodyNFT.t.sol`
 
 - [ ] **Step 1: Write the failing test file**
 
@@ -105,10 +105,10 @@ git commit -m "Initialize Foundry project with OpenZeppelin v5.6.1"
 pragma solidity ^0.8.28;
 
 import {Test} from "forge-std/Test.sol";
-import {WCustodyNFT} from "../src/WCustodyNFT.sol";
+import {IRLCustodyNFT} from "../src/IRLCustodyNFT.sol";
 
-contract WCustodyNFTTest is Test {
-    WCustodyNFT public nft;
+contract IRLCustodyNFTTest is Test {
+    IRLCustodyNFT public nft;
     address public admin = address(1);
     address public minter = address(2);
     address public creator = address(3);
@@ -119,7 +119,7 @@ contract WCustodyNFTTest is Test {
 
     function setUp() public {
         vm.prank(admin);
-        nft = new WCustodyNFT(admin);
+        nft = new IRLCustodyNFT(admin);
         vm.prank(admin);
         nft.grantRole(nft.MINTER_ROLE(), minter);
     }
@@ -147,7 +147,7 @@ contract WCustodyNFTTest is Test {
         uint256 expected = uint256(keccak256(abi.encodePacked(NID)));
         vm.prank(minter);
         vm.expectEmit(true, true, false, true);
-        emit WCustodyNFT.AssetMinted(expected, NID, ASSET_TREE_CID, creator);
+        emit IRLCustodyNFT.AssetMinted(expected, NID, ASSET_TREE_CID, creator);
         nft.mint(creator, NID, ASSET_TREE_CID, creator, 1000);
     }
 }
@@ -160,12 +160,12 @@ cd /Users/allup/dev/w/w/contracts
 forge test -vv
 ```
 
-Expected: compilation error — `WCustodyNFT` does not exist yet.
+Expected: compilation error — `IRLCustodyNFT` does not exist yet.
 
-### Task 3: Implement WCustodyNFT — mint and core storage
+### Task 3: Implement IRLCustodyNFT — mint and core storage
 
 **Files:**
-- Create: `contracts/src/WCustodyNFT.sol`
+- Create: `contracts/src/IRLCustodyNFT.sol`
 
 - [ ] **Step 3: Write the contract**
 
@@ -178,7 +178,7 @@ import {ERC721URIStorage} from "@openzeppelin/contracts/token/ERC721/extensions/
 import {ERC2981} from "@openzeppelin/contracts/token/common/ERC2981.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 
-contract WCustodyNFT is ERC721, ERC721URIStorage, ERC2981, AccessControl {
+contract IRLCustodyNFT is ERC721, ERC721URIStorage, ERC2981, AccessControl {
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
 
     mapping(uint256 tokenId => string nid) private _tokenNids;
@@ -194,7 +194,7 @@ contract WCustodyNFT is ERC721, ERC721URIStorage, ERC2981, AccessControl {
     error RoyaltyFeeTooHigh(uint96 feeNumerator);
     error AssetNotFound();
 
-    constructor(address admin) ERC721("W Custody", "WCUSTODY") {
+    constructor(address admin) ERC721("IRL Custody", "IRL") {
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
     }
 
@@ -280,8 +280,8 @@ Expected: all 4 tests PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add contracts/src/WCustodyNFT.sol contracts/test/WCustodyNFT.t.sol
-git commit -m "Add WCustodyNFT contract with mint, token ID derivation, and URI"
+git add contracts/src/IRLCustodyNFT.sol contracts/test/IRLCustodyNFT.t.sol
+git commit -m "Add IRLCustodyNFT contract with mint, token ID derivation, and URI"
 ```
 
 ---
@@ -289,7 +289,7 @@ git commit -m "Add WCustodyNFT contract with mint, token ID derivation, and URI"
 ### Task 4: Write failing tests — lookups and royalties
 
 **Files:**
-- Modify: `contracts/test/WCustodyNFT.t.sol`
+- Modify: `contracts/test/IRLCustodyNFT.t.sol`
 
 - [ ] **Step 1: Add lookup and royalty tests**
 
@@ -331,7 +331,7 @@ Append to the test contract:
         uint256 tokenId = nft.mint(creator, NID, ASSET_TREE_CID, creator, 1000);
         vm.prank(creator);
         vm.expectEmit(true, false, false, true);
-        emit WCustodyNFT.RoyaltyUpdated(tokenId, other, 500);
+        emit IRLCustodyNFT.RoyaltyUpdated(tokenId, other, 500);
         nft.updateRoyalty(tokenId, other, 500);
     }
 ```
@@ -348,8 +348,8 @@ Expected: all 9 tests PASS (implementation already supports these).
 - [ ] **Step 3: Commit**
 
 ```bash
-git add contracts/test/WCustodyNFT.t.sol
-git commit -m "Add lookup and royalty tests for WCustodyNFT"
+git add contracts/test/IRLCustodyNFT.t.sol
+git commit -m "Add lookup and royalty tests for IRLCustodyNFT"
 ```
 
 ---
@@ -357,7 +357,7 @@ git commit -m "Add lookup and royalty tests for WCustodyNFT"
 ### Task 5: Write failing tests — all revert cases
 
 **Files:**
-- Modify: `contracts/test/WCustodyNFT.t.sol`
+- Modify: `contracts/test/IRLCustodyNFT.t.sol`
 
 - [ ] **Step 1: Add revert tests**
 
@@ -376,25 +376,25 @@ Append to the test contract:
         vm.prank(minter);
         nft.mint(creator, NID, ASSET_TREE_CID, creator, 1000);
         vm.prank(minter);
-        vm.expectRevert(abi.encodeWithSelector(WCustodyNFT.AssetAlreadyRegistered.selector, NID));
+        vm.expectRevert(abi.encodeWithSelector(IRLCustodyNFT.AssetAlreadyRegistered.selector, NID));
         nft.mint(creator, NID, ASSET_TREE_CID, creator, 1000);
     }
 
     function test_mint_reverts_zero_address() public {
         vm.prank(minter);
-        vm.expectRevert(WCustodyNFT.InvalidRecipient.selector);
+        vm.expectRevert(IRLCustodyNFT.InvalidRecipient.selector);
         nft.mint(address(0), NID, ASSET_TREE_CID, creator, 1000);
     }
 
     function test_mint_reverts_empty_nid() public {
         vm.prank(minter);
-        vm.expectRevert(WCustodyNFT.InvalidNid.selector);
+        vm.expectRevert(IRLCustodyNFT.InvalidNid.selector);
         nft.mint(creator, "", ASSET_TREE_CID, creator, 1000);
     }
 
     function test_mint_reverts_royalty_too_high() public {
         vm.prank(minter);
-        vm.expectRevert(abi.encodeWithSelector(WCustodyNFT.RoyaltyFeeTooHigh.selector, uint96(10001)));
+        vm.expectRevert(abi.encodeWithSelector(IRLCustodyNFT.RoyaltyFeeTooHigh.selector, uint96(10001)));
         nft.mint(creator, NID, ASSET_TREE_CID, creator, 10001);
     }
 
@@ -402,7 +402,7 @@ Append to the test contract:
         vm.prank(minter);
         uint256 tokenId = nft.mint(creator, NID, ASSET_TREE_CID, creator, 1000);
         vm.prank(other);
-        vm.expectRevert(abi.encodeWithSelector(WCustodyNFT.NotTokenHolder.selector, tokenId));
+        vm.expectRevert(abi.encodeWithSelector(IRLCustodyNFT.NotTokenHolder.selector, tokenId));
         nft.updateRoyalty(tokenId, other, 500);
     }
 
@@ -410,7 +410,7 @@ Append to the test contract:
         vm.prank(minter);
         uint256 tokenId = nft.mint(creator, NID, ASSET_TREE_CID, creator, 1000);
         vm.prank(creator);
-        vm.expectRevert(abi.encodeWithSelector(WCustodyNFT.RoyaltyFeeTooHigh.selector, uint96(10001)));
+        vm.expectRevert(abi.encodeWithSelector(IRLCustodyNFT.RoyaltyFeeTooHigh.selector, uint96(10001)));
         nft.updateRoyalty(tokenId, creator, 10001);
     }
 
@@ -420,7 +420,7 @@ Append to the test contract:
     }
 
     function test_tokenIdOf_reverts_unregistered_nid() public {
-        vm.expectRevert(WCustodyNFT.AssetNotFound.selector);
+        vm.expectRevert(IRLCustodyNFT.AssetNotFound.selector);
         nft.tokenIdOf("bafyunknown");
     }
 ```
@@ -437,8 +437,8 @@ Expected: all 18 tests PASS.
 - [ ] **Step 3: Commit**
 
 ```bash
-git add contracts/test/WCustodyNFT.t.sol
-git commit -m "Add revert case tests for WCustodyNFT"
+git add contracts/test/IRLCustodyNFT.t.sol
+git commit -m "Add revert case tests for IRLCustodyNFT"
 ```
 
 ---
@@ -446,7 +446,7 @@ git commit -m "Add revert case tests for WCustodyNFT"
 ### Task 6: Write fuzz test — token ID determinism
 
 **Files:**
-- Modify: `contracts/test/WCustodyNFT.t.sol`
+- Modify: `contracts/test/IRLCustodyNFT.t.sol`
 
 - [ ] **Step 1: Add fuzz test**
 
@@ -476,7 +476,7 @@ Expected: PASS (256 runs by default).
 - [ ] **Step 3: Commit**
 
 ```bash
-git add contracts/test/WCustodyNFT.t.sol
+git add contracts/test/IRLCustodyNFT.t.sol
 git commit -m "Add fuzz test for token ID determinism"
 ```
 
@@ -487,7 +487,7 @@ git commit -m "Add fuzz test for token ID determinism"
 ### Task 7: Write ERC-165 interface support test
 
 **Files:**
-- Modify: `contracts/test/WCustodyNFT.t.sol`
+- Modify: `contracts/test/IRLCustodyNFT.t.sol`
 
 - [ ] **Step 1: Add interface support tests**
 
@@ -521,7 +521,7 @@ Expected: all 22 tests PASS.
 - [ ] **Step 3: Commit**
 
 ```bash
-git add contracts/test/WCustodyNFT.t.sol
+git add contracts/test/IRLCustodyNFT.t.sol
 git commit -m "Add ERC-165 interface support tests"
 ```
 
@@ -530,7 +530,7 @@ git commit -m "Add ERC-165 interface support tests"
 ### Task 8: Write deployment script
 
 **Files:**
-- Create: `contracts/script/DeployWCustodyNFT.s.sol`
+- Create: `contracts/script/DeployIRLCustodyNFT.s.sol`
 
 - [ ] **Step 1: Write the deployment script**
 
@@ -539,14 +539,14 @@ git commit -m "Add ERC-165 interface support tests"
 pragma solidity ^0.8.28;
 
 import {Script, console} from "forge-std/Script.sol";
-import {WCustodyNFT} from "../src/WCustodyNFT.sol";
+import {IRLCustodyNFT} from "../src/IRLCustodyNFT.sol";
 
-contract DeployWCustodyNFT is Script {
+contract DeployIRLCustodyNFT is Script {
     function run() public {
         address admin = vm.envAddress("ADMIN_ADDRESS");
         vm.startBroadcast();
-        WCustodyNFT nft = new WCustodyNFT(admin);
-        console.log("WCustodyNFT deployed at:", address(nft));
+        IRLCustodyNFT nft = new IRLCustodyNFT(admin);
+        console.log("IRLCustodyNFT deployed at:", address(nft));
         vm.stopBroadcast();
     }
 }
@@ -564,8 +564,8 @@ Expected: compiles without errors.
 - [ ] **Step 3: Commit**
 
 ```bash
-git add contracts/script/DeployWCustodyNFT.s.sol
-git commit -m "Add WCustodyNFT deployment script"
+git add contracts/script/DeployIRLCustodyNFT.s.sol
+git commit -m "Add IRLCustodyNFT deployment script"
 ```
 
 ---

@@ -4,7 +4,7 @@
 
 **Goal:** Reorganize `contracts/` from a flat Foundry project into a monorepo structure supporting both Solidity (Foundry) and Arbitrum Stylus (Rust) contracts with shared interfaces.
 
-**Architecture:** Move existing Solidity files into `contracts/solidity/`, extract a shared `IWCustodyNFT.sol` interface into `contracts/interfaces/`, and create a symlink so Foundry can resolve it. Stylus and integration directories are deferred until CP Verifier development begins.
+**Architecture:** Move existing Solidity files into `contracts/solidity/`, extract a shared `IIRLCustodyNFT.sol` interface into `contracts/interfaces/`, and create a symlink so Foundry can resolve it. Stylus and integration directories are deferred until CP Verifier development begins.
 
 **Tech Stack:** Foundry (Solidity 0.8.28), OpenZeppelin v5.6.1, forge-std
 
@@ -15,9 +15,9 @@
 ## File Map
 
 **Files to move:**
-- `contracts/src/WCustodyNFT.sol` → `contracts/solidity/src/WCustodyNFT.sol`
-- `contracts/test/WCustodyNFT.t.sol` → `contracts/solidity/test/WCustodyNFT.t.sol`
-- `contracts/script/DeployWCustodyNFT.s.sol` → `contracts/solidity/script/DeployWCustodyNFT.s.sol`
+- `contracts/src/IRLCustodyNFT.sol` → `contracts/solidity/src/IRLCustodyNFT.sol`
+- `contracts/test/IRLCustodyNFT.t.sol` → `contracts/solidity/test/IRLCustodyNFT.t.sol`
+- `contracts/script/DeployIRLCustodyNFT.s.sol` → `contracts/solidity/script/DeployIRLCustodyNFT.s.sol`
 - `contracts/lib/` → `contracts/solidity/lib/`
 - `contracts/foundry.toml` → `contracts/solidity/foundry.toml`
 - `contracts/.gitignore` → `contracts/solidity/.gitignore`
@@ -29,12 +29,12 @@
 - `contracts/rust/` (empty placeholder)
 
 **Files to create:**
-- `contracts/interfaces/IWCustodyNFT.sol` (extracted interface)
+- `contracts/interfaces/IIRLCustodyNFT.sol` (extracted interface)
 - `contracts/solidity/interfaces` (symlink → `../interfaces`)
 
 **Files to modify:**
 - `contracts/solidity/foundry.toml` (add `@interfaces/` remapping)
-- `contracts/solidity/src/WCustodyNFT.sol` (import and implement interface)
+- `contracts/solidity/src/IRLCustodyNFT.sol` (import and implement interface)
 - `CLAUDE.md` (update paths and build commands)
 - `README.md` (update paths and build commands)
 
@@ -142,12 +142,12 @@ git commit -m "Move Foundry project into contracts/solidity/"
 
 ## Chunk 2: Extract Interface and Create Symlink
 
-### Task 3: Create the shared IWCustodyNFT interface
+### Task 3: Create the shared IIRLCustodyNFT interface
 
 **Files:**
-- Create: `contracts/interfaces/IWCustodyNFT.sol`
+- Create: `contracts/interfaces/IIRLCustodyNFT.sol`
 
-The interface must match the public API of `WCustodyNFT.sol` exactly. It includes all external/public functions, events, and custom errors that external callers need.
+The interface must match the public API of `IRLCustodyNFT.sol` exactly. It includes all external/public functions, events, and custom errors that external callers need.
 
 - [ ] **Step 1: Create interfaces directory**
 
@@ -157,15 +157,15 @@ mkdir -p /Users/allup/Nextcloud/orgmode/w/w-code/contracts/interfaces
 
 - [ ] **Step 2: Write the interface file**
 
-Create `contracts/interfaces/IWCustodyNFT.sol`:
+Create `contracts/interfaces/IIRLCustodyNFT.sol`:
 
 ```solidity
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-/// @title IWCustodyNFT
-/// @notice Interface for the W Custody NFT contract.
-interface IWCustodyNFT {
+/// @title IIRLCustodyNFT
+/// @notice Interface for the IRL Custody NFT contract.
+interface IIRLCustodyNFT {
     event AssetMinted(uint256 indexed tokenId, string nid, string assetTreeCid, address indexed to);
     event RoyaltyUpdated(uint256 indexed tokenId, address receiver, uint96 feeNumerator);
 
@@ -202,8 +202,8 @@ interface IWCustodyNFT {
 
 ```bash
 cd /Users/allup/Nextcloud/orgmode/w/w-code
-git add contracts/interfaces/IWCustodyNFT.sol
-git commit -m "Extract IWCustodyNFT interface into shared interfaces/"
+git add contracts/interfaces/IIRLCustodyNFT.sol
+git commit -m "Extract IIRLCustodyNFT interface into shared interfaces/"
 ```
 
 ---
@@ -227,7 +227,7 @@ ln -s ../interfaces interfaces
 ls -la contracts/solidity/interfaces/
 ```
 
-Expected: shows `IWCustodyNFT.sol`
+Expected: shows `IIRLCustodyNFT.sol`
 
 - [ ] **Step 3: Update foundry.toml to add the interfaces remapping**
 
@@ -265,30 +265,30 @@ git commit -m "Add interfaces symlink and @interfaces/ remapping to foundry.toml
 
 ---
 
-### Task 5: Update WCustodyNFT to import the interface
+### Task 5: Update IRLCustodyNFT to import the interface
 
 **Files:**
-- Modify: `contracts/solidity/src/WCustodyNFT.sol`
+- Modify: `contracts/solidity/src/IRLCustodyNFT.sol`
 
-WCustodyNFT should import and implement the extracted interface. This ensures the contract stays in sync with the canonical interface.
+IRLCustodyNFT should import and implement the extracted interface. This ensures the contract stays in sync with the canonical interface.
 
-- [ ] **Step 1: Add import and `is IWCustodyNFT` to WCustodyNFT.sol**
+- [ ] **Step 1: Add import and `is IIRLCustodyNFT` to IRLCustodyNFT.sol**
 
 Add this import after the existing imports:
 
 ```solidity
-import {IWCustodyNFT} from "@interfaces/IWCustodyNFT.sol";
+import {IIRLCustodyNFT} from "@interfaces/IIRLCustodyNFT.sol";
 ```
 
-Add `IWCustodyNFT` to the contract's inheritance list:
+Add `IIRLCustodyNFT` to the contract's inheritance list:
 
 ```solidity
-contract WCustodyNFT is ERC721, ERC721URIStorage, ERC2981, AccessControl, IWCustodyNFT {
+contract IRLCustodyNFT is ERC721, ERC721URIStorage, ERC2981, AccessControl, IIRLCustodyNFT {
 ```
 
-Note: The contract already implements all the functions declared in the interface. Adding `is IWCustodyNFT` makes this explicit and will cause a compile error if the interface and implementation drift apart.
+Note: The contract already implements all the functions declared in the interface. Adding `is IIRLCustodyNFT` makes this explicit and will cause a compile error if the interface and implementation drift apart.
 
-Since `IWCustodyNFT` declares the same events and errors, remove the duplicate declarations from the contract body (the ones from the interface are inherited). Specifically, remove these lines from `WCustodyNFT.sol`:
+Since `IIRLCustodyNFT` declares the same events and errors, remove the duplicate declarations from the contract body (the ones from the interface are inherited). Specifically, remove these lines from `IRLCustodyNFT.sol`:
 
 ```solidity
     event AssetMinted(uint256 indexed tokenId, string nid, string assetTreeCid, address indexed to);
@@ -319,14 +319,14 @@ Expected: compilation succeeds with no errors
 forge test -vv
 ```
 
-Expected: all tests pass. No test changes needed — `WCustodyNFT.AssetMinted`, `WCustodyNFT.AssetAlreadyRegistered`, etc. resolve to the inherited declarations from `IWCustodyNFT`. Solidity 0.8.28 allows referring to inherited events/errors via the derived contract name.
+Expected: all tests pass. No test changes needed — `IRLCustodyNFT.AssetMinted`, `IRLCustodyNFT.AssetAlreadyRegistered`, etc. resolve to the inherited declarations from `IIRLCustodyNFT`. Solidity 0.8.28 allows referring to inherited events/errors via the derived contract name.
 
 - [ ] **Step 4: Commit**
 
 ```bash
 cd /Users/allup/Nextcloud/orgmode/w/w-code
-git add contracts/solidity/src/WCustodyNFT.sol
-git commit -m "Implement IWCustodyNFT interface in WCustodyNFT"
+git add contracts/solidity/src/IRLCustodyNFT.sol
+git commit -m "Implement IIRLCustodyNFT interface in IRLCustodyNFT"
 ```
 
 ---
@@ -365,13 +365,13 @@ forge test --match-test testFuzz -vv
 Update the path reference from:
 
 ```
-### WCustodyNFT (`contracts/src/WCustodyNFT.sol`)
+### IRLCustodyNFT (`contracts/src/IRLCustodyNFT.sol`)
 ```
 
 to:
 
 ```
-### WCustodyNFT (`contracts/solidity/src/WCustodyNFT.sol`)
+### IRLCustodyNFT (`contracts/solidity/src/IRLCustodyNFT.sol`)
 ```
 
 - [ ] **Step 3: Update Design Documents section**
@@ -406,7 +406,7 @@ contracts/
 │   ├── interfaces/    # Symlink → ../interfaces
 │   └── foundry.toml
 ├── interfaces/        # Shared Solidity interfaces
-│   └── IWCustodyNFT.sol
+│   └── IIRLCustodyNFT.sol
 ├── stylus/            # (future) Cargo workspace for Rust/Stylus contracts
 └── integration/       # (future) Cross-language integration tests
 \```
@@ -510,7 +510,7 @@ Expected: gas report prints, no errors
 forge build --sizes
 ```
 
-Expected: WCustodyNFT under 24KB limit
+Expected: IRLCustodyNFT under 24KB limit
 
 - [ ] **Step 5: Verify directory structure matches spec**
 
@@ -522,7 +522,7 @@ Expected:
 ```
 contracts/
 contracts/interfaces
-contracts/interfaces/IWCustodyNFT.sol
+contracts/interfaces/IIRLCustodyNFT.sol
 contracts/solidity
 contracts/solidity/.gitignore
 contracts/solidity/foundry.toml
