@@ -6,7 +6,7 @@
 
 ## Context
 
-W's smart contract layer currently lives in `contracts/` as a single Foundry project containing WCustodyNFT (Solidity). The upcoming VCP Verifier and 1-2 additional contracts will be written in Rust targeting Arbitrum Stylus. These Stylus contracts call Solidity contracts directly (e.g., VCP Verifier holds `MINTER_ROLE` and calls `WCustodyNFT.mint()`), so the two build systems need shared ABI artifacts at build time.
+W's smart contract layer currently lives in `contracts/` as a single Foundry project containing WCustodyNFT (Solidity). The upcoming CP Verifier and 1-2 additional contracts will be written in Rust targeting Arbitrum Stylus. These Stylus contracts call Solidity contracts directly (e.g., CP Verifier holds `MINTER_ROLE` and calls `WCustodyNFT.mint()`), so the two build systems need shared ABI artifacts at build time.
 
 ## Design Decision
 
@@ -39,9 +39,9 @@ w-code/
 │   │   ├── Cargo.toml               # [workspace] members = ["vcp-verifier", ...]
 │   │   ├── vcp-verifier/
 │   │   │   ├── Cargo.toml
-│   │   │   ├── build.rs             # generates ABI JSON from Solidity artifacts
+│   │   │   ├── rust-toolchain.toml  # stable + wasm32-unknown-unknown target
 │   │   │   └── src/
-│   │   │       └── lib.rs
+│   │   │       └── lib.rs           # uses sol_interface! to call Solidity contracts
 │   │   └── <future-crate>/
 │   │       ├── Cargo.toml
 │   │       └── src/
@@ -85,27 +85,42 @@ WCustodyNFT imports `@interfaces/IWCustodyNFT.sol` and implements it. ABI JSON o
 
 ### Stylus (contracts/stylus/)
 
-Each crate depends on `stylus-sdk` and `alloy-sol-types`. Crates consume interfaces via JSON ABI (not raw `.sol` files, since `sol!` only parses a Solidity subset and rejects pragmas/imports).
-
-The recommended approach: each Stylus crate has a `build.rs` that reads the ABI JSON from `solidity/out/` (avoiding a `forge` dependency on the Rust build path) and copies it into the crate's local `abi/` directory. The `sol!` macro then consumes the JSON ABI:
+Each crate depends on `stylus-sdk` (v0.8.4+), `alloy-primitives`, and `alloy-sol-types`. Stylus contracts call Solidity contracts using the `sol_interface!` macro, which declares the target interface inline in Rust using Solidity syntax:
 
 ```rust
-sol!(IWCustodyNFT, "abi/IWCustodyNFT.json");
+use stylus_sdk::prelude::*;
+
+sol_interface! {
+    interface IWCustodyNFT {
+        function mint(address to, string calldata nid, string calldata assetTreeCid,
+                      address royaltyReceiver, uint96 royaltyFee) external returns (uint256);
+        function ownerOf(uint256 tokenId) external view returns (address);
+        function nidOf(uint256 tokenId) external view returns (string);
+    }
+}
 ```
 
-This requires running `forge build` in `contracts/solidity/` before building Stylus crates. This is more robust than pointing `sol!` at `.sol` files and avoids parser limitations.
+This generates type-safe Rust bindings at compile time. No `build.rs`, no ABI JSON files, no dependency on `forge build` output. The `interfaces/IWCustodyNFT.sol` file remains the human-readable canonical reference, and the `sol_interface!` declaration must be kept in sync with it manually (enforced by integration tests).
+
+Cross-contract calls use explicit call constructors:
+- `Call::new()` for view/pure calls (`&self`)
+- `Call::new_mutating(self)` for state-changing calls (`&mut self`)
+
+Stylus contracts export their own ABI as a Solidity interface via `cargo stylus export-abi`.
 
 ### Interface Flow
 
 ```
-interfaces/IWCustodyNFT.sol  (canonical source of truth)
+interfaces/IWCustodyNFT.sol  (canonical source of truth for humans)
     │
     ├── symlinked into solidity/interfaces/
     │   └── imported by solidity/src/WCustodyNFT.sol  (implements it)
     │
-    └── ABI extracted via forge inspect or solidity/out/
-        └── consumed by stylus/vcp-verifier/ via sol! JSON binding
+    └── mirrored as sol_interface! declaration in Rust
+        └── used by stylus/vcp-verifier/src/lib.rs (calls it)
 ```
+
+Integration tests verify that the `sol_interface!` declaration matches the deployed Solidity contract's ABI.
 
 ### Integration Tests (contracts/integration/)
 
@@ -114,7 +129,7 @@ A standalone Rust crate (not part of the Stylus workspace) that:
 1. Requires a running nitro-testnode (Stylus WASM execution needs a Nitro-compatible devnet; anvil does not support Stylus)
 2. Deploys compiled Solidity artifacts (reads ABI/bytecode from `solidity/out/`)
 3. Deploys Stylus WASM contracts
-4. Tests the full mint flow: VCP Verifier validates attestation → calls WCustodyNFT.mint()
+4. Tests the full mint flow: CP Verifier validates attestation → calls WCustodyNFT.mint()
 
 Setup requirement: Docker must be running with `nitro-testnode --init`. For Solidity-only tests, `forge test` in `contracts/solidity/` remains the faster path.
 
@@ -155,7 +170,7 @@ One-time migration from the current flat `contracts/` structure:
 6. Verify `forge build && forge test` pass from `contracts/solidity/`
 7. Update `CLAUDE.md` and `README.md` with new paths and commands
 
-The `contracts/stylus/` and `contracts/integration/` directories will be created when VCP Verifier development begins. The directory tree above shows the target architecture.
+The `contracts/stylus/` and `contracts/integration/` directories will be created when CP Verifier development begins. The directory tree above shows the target architecture.
 
 No Stylus code exists yet, so the Cargo workspace and integration crate start as minimal scaffolds.
 
@@ -165,5 +180,5 @@ No Stylus code exists yet, so the Cargo workspace and integration crate start as
 - OpenZeppelin v5.6.1 (ERC-721, ERC-2981, AccessControl)
 - Stylus contracts target Arbitrum L3
 - Token ID scheme (`uint256(keccak256(nid))`) and immutable token URIs are unchanged
-- VCP Verifier will hold `MINTER_ROLE` on WCustodyNFT
+- CP Verifier will hold `MINTER_ROLE` on WCustodyNFT
 - Dependencies are committed directly (no git submodules), so no `.gitmodules` update needed
